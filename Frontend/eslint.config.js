@@ -2,6 +2,8 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import prettier from 'eslint-config-prettier';  // Prettier 설정 추가
+import prettierPlugin from 'eslint-plugin-prettier';  // Prettier 플러그인 추가
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
