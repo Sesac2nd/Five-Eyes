@@ -1,0 +1,151 @@
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: -350px;
+  width: 350px;
+  height: 100vh;
+  background: var(--sidebar-bg);
+  box-shadow: 2px 0 20px var(--shadow-medium);
+  transition: left 0.3s ease, background-color 0.3s ease;
+  z-index: 1001;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-primary);
+}
+
+.sidebar.active {
+  left: 0;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  transition: all 0.3s ease;
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
+}
+
+.sidebar-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  transition: color 0.3s ease;
+}
+
+.sidebar-section {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.menu-item {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin: 2px 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.menu-item:hover {
+  background: var(--bg-secondary);
+  transform: translateX(5px);
+}
+
+.menu-item:hover .menu-icon {
+  color: var(--accent-primary);
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.menu-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.3s ease;
+}
+
+.menu-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  transition: color 0.3s ease;
+}
+
+/* Dark Mode Specific Styling */
+.dark .sidebar {
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.dark .menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 300px;
+    left: -300px;
+  }
+}
+
+/* Scroll bar styling */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Dark mode scrollbar */
+.dark .sidebar::-webkit-scrollbar-track {
+  background: #1f1f1f;
+}
+
+.dark .sidebar::-webkit-scrollbar-thumb {
+  background: #404040;
+}
+
+.dark .sidebar::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
