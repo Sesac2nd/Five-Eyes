@@ -214,6 +214,7 @@ function ChatbotPage() {
                 )}
               </div>
 
+
               {message.type === "bot" && (
                 <div className="message-actions">
                   <button
