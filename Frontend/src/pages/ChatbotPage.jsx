@@ -42,7 +42,6 @@ function ChatbotPage() {
     setInputMessage("");
     setIsLoading(true);
 
-    // 시뮬레이션을 위한 지연
     setTimeout(() => {
       const botResponse = generateBotResponse(inputMessage);
       setMessages((prev) => [...prev, botResponse]);
@@ -62,8 +61,8 @@ function ChatbotPage() {
 
 **출처**: 조선왕조실록 > 세종실록 > 세종 3년 5월 15일
 **신뢰도**: 95%
-**관련 키워드**: 내시부, 궁중제도, 세종대왕`,
-        keywords: ["내시부", "고증", "실록"],  // 강제로 다르게 줌
+**관련 키워드**: 내시부, 고증, 실록`,
+        keywords: ["내시부", "고증", "실록"],
         sources: ["세종실록 12권", "경국대전"],
       },
       creative: {
@@ -80,7 +79,7 @@ function ChatbotPage() {
 - 개인의 성장과 역사적 사명감
 
 **추천 참고 사료**: 세종실록, 경국대전, 승정원일기`,
-        keywords: ["창작", "스토리", "아이디어"],  // 차별 키워드
+        keywords: ["창작", "스토리", "아이디어"],
         sources: ["세종실록", "승정원일기"],
       },
     };
@@ -110,17 +109,14 @@ function ChatbotPage() {
 
   const toggleListening = () => {
     setIsListening(!isListening);
-    // 실제 구현시 Web Speech API 사용
   };
 
   const handleSpeakMessage = (content) => {
-    // 실제 구현시 Speech Synthesis API 사용
     console.log("Speaking:", content);
   };
 
   const handleCopyMessage = (content) => {
     navigator.clipboard.writeText(content);
-    // 토스트 메시지 표시 가능
   };
 
   const handleReset = () => {
@@ -128,7 +124,10 @@ function ChatbotPage() {
       {
         id: 1,
         type: "bot",
-        content: "대화가 초기화되었습니다. 새로운 질문을 해주세요!",
+        content:
+          chatMode === "verification"
+            ? "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요."
+            : "안녕하세요! 저는 조선왕조실록 기반 창작 지원 AI입니다. 창작하고 싶은 이야기를 말씀해 주세요.",
         timestamp: new Date(),
         keywords: [],
       },
@@ -149,7 +148,9 @@ function ChatbotPage() {
         <div className="chat-title">
           <h1>역사 AI 챗봇</h1>
           <p>
-            조선왕조실록 기반 질의응답 및 창작 지원{" "}
+            {chatMode === "verification"
+              ? "조선왕조실록 기반 고증 검증 기능을 제공합니다."
+              : "조선왕조실록 기반 창작 지원 기능을 제공합니다."}{" "}
             <span
               style={{
                 marginLeft: 10,
@@ -181,7 +182,7 @@ function ChatbotPage() {
           </button>
         </div>
       </div>
-               
+
       <div className="chat-container">
         <div className="messages-container">
           {messages.map((message) => (
@@ -213,7 +214,6 @@ function ChatbotPage() {
                   </div>
                 )}
               </div>
-
 
               {message.type === "bot" && (
                 <div className="message-actions">
@@ -317,3 +317,4 @@ function ChatbotPage() {
 }
 
 export default ChatbotPage;
+
