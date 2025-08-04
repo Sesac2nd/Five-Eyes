@@ -25,7 +25,7 @@ function CreditsPage() {
   return (
     <div className="credits-page">
       <div className="page-header">
-        <h1>만든 이</h1>
+        <h1>🧑‍💻만든이</h1>
         <p>역사로 프로젝트를 만든 팀을 소개합니다</p>
       </div>
 
@@ -48,7 +48,7 @@ function CreditsPage() {
         <div className="info-grid">
           <div className="info-item">
             <h3>개발 기간</h3>
-            <p>2025.01 - 2025.02 (3주)</p>
+            <p>2025.07.25  - 2025.08.12 (3주)</p>
           </div>
           <div className="info-item">
             <h3>기술 스택</h3>

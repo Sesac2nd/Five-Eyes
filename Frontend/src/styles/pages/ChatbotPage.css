@@ -11,6 +11,19 @@
 .chat-header {
   margin-bottom: 20px;
   text-align: center;
+  border-bottom: 3px solid transparent; /* 기본 투명 */
+  padding-bottom: 10px;
+  transition: border-color 0.3s ease;
+}
+
+/* 고증 검증 모드일 때 */
+.chatbot-page.verification .chat-header {
+  border-color: #4285f4;
+}
+
+/* 창작 도우미 모드일 때 */
+.chatbot-page.creative .chat-header {
+  border-color: #ffa438;
 }
 
 .chat-title h1 {
@@ -47,10 +60,23 @@
   background: #f8faff;
 }
 
+/* 활성화 시 공통 스타일 */
 .mode-btn.active {
+  color: white;
+}
+
+/* 고증 검증 활성화 스타일 (파란색) */
+.mode-btn.active.verification {
   border-color: #4285f4;
   background: #4285f4;
-  color: white;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+
+/* 창작 도우미 활성화 스타일 (주황색) */
+.mode-btn.active.creative {
+  border-color: #ffa438;
+  background: #ffa438;
+  box-shadow: 0 2px 8px rgba(255, 164, 56, 0.35);
 }
 
 .chat-container {
@@ -122,6 +148,7 @@
   margin-top: 12px;
 }
 
+/* 키워드 버튼 기본 스타일 */
 .keyword-btn {
   padding: 4px 8px;
   background: #e3f2fd;
@@ -137,6 +164,28 @@
   background: #2196f3;
   color: white;
   transform: translateY(-1px);
+}
+
+/* verification 모드에서 키워드 버튼 색상 */
+.chatbot-page.verification .keyword-btn {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  color: #1976d2;
+}
+.chatbot-page.verification .keyword-btn:hover {
+  background: #2196f3;
+  color: white;
+}
+
+/* creative 모드에서 키워드 버튼 색상 */
+.chatbot-page.creative .keyword-btn {
+  background: #fff6e1;
+  border: 1px solid #ffa438;
+  color: #ffa438;
+}
+.chatbot-page.creative .keyword-btn:hover {
+  background: #ffa438;
+  color: #fff;
 }
 
 .message-sources {
