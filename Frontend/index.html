@@ -2,685 +2,105 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>역사로(HistPath)</title>
+    <title>역사로(HistPath) - AI 기반 한국사 고증 검색 플랫폼</title>
+    <meta name="description" content="조선왕조실록 기반 AI 역사 고증 및 창작 지원 서비스" />
+    <meta name="keywords" content="조선왕조실록, 역사, AI, 고증, 창작, 한국사" />
+ 
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="역사로(HistPath) - AI 기반 한국사 고증 검색 플랫폼" />
+    <meta property="og:description" content="조선왕조실록 기반 AI 역사 고증 및 창작 지원 서비스" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://histpath.com" />
+ 
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+ 
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+ 
     <style>
-      * {
+      /* Critical CSS for above-the-fold content */
+      body {
+        font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: "Arial", sans-serif;
         background: #ffffff;
         color: #333;
-        height: 100vh;
-        overflow-x: hidden;
+        line-height: 1.6;
       }
-
-      /* Header - 미니멀 */
-      .header {
+ 
+      /* Loading Spinner */
+      .loading-container {
         position: fixed;
         top: 0;
         left: 0;
-        right: 0;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        padding: 15px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #f0f0f0;
-        z-index: 1000;
-      }
-
-      .hamburger {
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 4px;
-        transition: all 0.3s ease;
-      }
-
-      .hamburger-line {
         width: 100%;
-        height: 3px;
-        background: #333;
-        border-radius: 2px;
-        transition: all 0.3s ease;
-      }
-
-      .hamburger.active .hamburger-line:nth-child(1) {
-        transform: rotate(45deg) translate(6px, 6px);
-      }
-
-      .hamburger.active .hamburger-line:nth-child(2) {
-        opacity: 0;
-      }
-
-      .hamburger.active .hamburger-line:nth-child(3) {
-        transform: rotate(-45deg) translate(6px, -6px);
-      }
-
-      .logo {
-        font-size: 22px;
-        font-weight: 300;
-        color: #333;
-        letter-spacing: 1px;
-      }
-
-      .user-menu {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-      }
-
-      .login-btn {
-        padding: 8px 16px;
-        border: 1px solid #ddd;
-        background: transparent;
-        border-radius: 20px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.3s ease;
-      }
-
-      .login-btn:hover {
-        background: #f8f9fa;
-      }
-
-      /* 사이드바 */
-      .sidebar {
-        position: fixed;
-        top: 0;
-        left: -350px;
-        width: 350px;
-        height: 100vh;
-        background: white;
-        box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
-        transition: left 0.3s ease;
-        z-index: 1001;
-        overflow-y: auto;
-      }
-
-      .sidebar.active {
-        left: 0;
-      }
-
-      .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid #f0f0f0;
-        background: #f8f9fa;
-      }
-
-      .sidebar-title {
-        font-size: 18px;
-        font-weight: bold;
-        color: #2c3e50;
-      }
-
-      .sidebar-subtitle {
-        font-size: 12px;
-        color: #7f8c8d;
-        margin-top: 5px;
-      }
-
-      .sidebar-section {
-        padding: 20px;
-        border-bottom: 1px solid #f0f0f0;
-      }
-
-      .section-title {
-        font-size: 14px;
-        font-weight: bold;
-        color: #34495e;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .menu-item {
-        padding: 12px 0;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border-radius: 8px;
-        padding-left: 12px;
-        margin: 2px 0;
-      }
-
-      .menu-item:hover {
-        background: #f8f9fa;
-        transform: translateX(5px);
-      }
-
-      .menu-icon {
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-      }
-
-      .menu-text {
-        font-size: 14px;
-        color: #333;
-      }
-
-      .menu-desc {
-        font-size: 11px;
-        color: #7f8c8d;
-        margin-top: 2px;
-      }
-
-      /* 오버레이 */
-      .overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.3);
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 999;
-      }
-
-      .overlay.active {
-        opacity: 1;
-        visibility: visible;
-      }
-
-      /* 메인 컨텐츠 - 구글 스타일 */
-      .main-content {
-        height: 100vh;
+        height: 100%;
+        background: #ffffff;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 0 20px;
-        margin-top: -60px;
+        z-index: 9999;
       }
-
-      .logo-main {
-        font-size: 72px;
-        font-weight: 300;
-        color: #333;
-        margin-bottom: 30px;
-        letter-spacing: 2px;
-        text-align: center;
-        line-height: 1.2;
+ 
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4285f4;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
       }
-
-      .logo-subtitle {
-        font-size: 16px;
-        color: #7f8c8d;
-        margin-bottom: 40px;
-        text-align: center;
-        font-weight: 300;
-      }
-
-      /* 검색 박스 - 구글 스타일 */
-      .search-container {
-        width: 100%;
-        max-width: 600px;
-        position: relative;
-        margin-bottom: 35px;
-      }
-
-      .search-box {
-        width: 100%;
-        padding: 15px 50px 15px 20px;
-        border: 1px solid #dfe1e5;
-        border-radius: 25px;
-        font-size: 16px;
-        outline: none;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      }
-
-      .search-box:focus {
-        border-color: #4285f4;
-        box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
-      }
-
-      .search-icon {
-        position: absolute;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9aa0a6;
-        font-size: 18px;
-        cursor: pointer;
-      }
-
-      .voice-icon {
-        position: absolute;
-        right: 50px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9aa0a6;
-        font-size: 16px;
-        cursor: pointer;
-      }
-
-      /* 버튼들 */
-      .search-buttons {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 30px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      .search-btn {
-        padding: 10px 20px;
-        border: 1px solid #f8f9fa;
-        background: #f8f9fa;
-        border-radius: 4px;
-        cursor: pointer;
+ 
+      .loading-text {
         font-size: 14px;
-        color: #3c4043;
-        transition: all 0.3s ease;
-        min-width: 54px;
+        color: #666;
       }
-
-      .search-btn:hover {
-        border-color: #dadce0;
-        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-      }
-
-      /* 빠른 기능 */
-      .quick-features {
-        display: flex;
-        gap: 30px;
-        margin-top: 20px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      .quick-feature {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border: 1px solid transparent;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 14px;
-        color: #5f6368;
-      }
-
-      .quick-feature:hover {
-        border-color: #dadce0;
-        background: #f8f9fa;
-      }
-
-      /* 푸터 */
-      .footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #f8f9fa;
-        padding: 15px 20px;
-        text-align: center;
-        font-size: 12px;
-        color: #70757a;
-        border-top: 1px solid #dadce0;
-      }
-
-      /* 모바일 반응형 */
-      @media (max-width: 768px) {
-        .logo-main {
-          font-size: 48px;
-          margin-bottom: 25px;
+ 
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-
-        .search-container {
-          max-width: 90%;
-        }
-
-        .quick-features {
-          gap: 15px;
-        }
-
-        .sidebar {
-          width: 300px;
-          left: -300px;
+        100% {
+          transform: rotate(360deg);
         }
       }
-
-      /* 검색 결과 페이지 */
-      .results-page {
+ 
+      /* Hide loading when React takes over */
+      .app-loaded .loading-container {
         display: none;
-        padding-top: 80px;
-        max-width: 800px;
-        margin: 0 auto;
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .results-page.active {
-        display: block;
-      }
-
-      .results-header {
-        margin-bottom: 20px;
-        font-size: 14px;
-        color: #70757a;
-      }
-
-      .result-item {
-        margin-bottom: 30px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #f0f0f0;
-      }
-
-      .result-url {
-        color: #1a73e8;
-        font-size: 14px;
-        margin-bottom: 5px;
-      }
-
-      .result-title {
-        color: #1a0dab;
-        font-size: 20px;
-        margin-bottom: 5px;
-        cursor: pointer;
-        line-height: 1.3;
-      }
-
-      .result-title:hover {
-        text-decoration: underline;
-      }
-
-      .result-snippet {
-        color: #4d5156;
-        font-size: 14px;
-        line-height: 1.58;
-      }
-
-      .result-meta {
-        margin-top: 8px;
-        font-size: 12px;
-        color: #70757a;
       }
     </style>
   </head>
   <body>
-    <!-- Header -->
-    <header class="header">
-      <div class="hamburger" onclick="toggleSidebar()">
-        <div class="hamburger-line"></div>
-        <div class="hamburger-line"></div>
-        <div class="hamburger-line"></div>
-      </div>
-
-      <div class="logo">역사로</div>
-
-      <div class="user-menu">
-        <button class="login-btn">로그인</button>
-      </div>
-    </header>
-
-    <!-- 오버레이 -->
-    <div class="overlay" onclick="closeSidebar()"></div>
-
-    <!-- 사이드바 -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-title">역사로 歷史路</div>
-        <div class="sidebar-subtitle">AI 기반 한국사 고증 검색 플랫폼</div>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="section-title">🔍 주요 기능</div>
-        <div class="menu-item">
-          <div class="menu-icon">🔍</div>
-          <div>
-            <div class="menu-text">고증 검색</div>
-            <div class="menu-desc">자연어로 역사적 사실 검색</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">📋</div>
-          <div>
-            <div class="menu-text">원문 비교</div>
-            <div class="menu-desc">한문 원문과 번역본 대조</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">📸</div>
-          <div>
-            <div class="menu-text">OCR 분석</div>
-            <div class="menu-desc">고문서 이미지 텍스트 추출</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">📊</div>
-          <div>
-            <div class="menu-text">리포트 생성</div>
-            <div class="menu-desc">고증 근거 PDF 다운로드</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="section-title">🏛️ 시대별 탐색</div>
-        <div class="menu-item">
-          <div class="menu-icon">👑</div>
-          <div>
-            <div class="menu-text">조선 전기</div>
-            <div class="menu-desc">태조~성종 (1392-1494)</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">👑</div>
-          <div>
-            <div class="menu-text">조선 중기</div>
-            <div class="menu-desc">연산군~인조 (1494-1649)</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">👑</div>
-          <div>
-            <div class="menu-text">조선 후기</div>
-            <div class="menu-desc">효종~순종 (1649-1910)</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="section-title">📚 사료 출처</div>
-        <div class="menu-item">
-          <div class="menu-icon">📜</div>
-          <div>
-            <div class="menu-text">조선왕조실록</div>
-            <div class="menu-desc">472년간의 공식 기록</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">📋</div>
-          <div>
-            <div class="menu-text">승정원일기</div>
-            <div class="menu-desc">왕의 일상 기록</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">📄</div>
-          <div>
-            <div class="menu-text">비변사등록</div>
-            <div class="menu-desc">국방 관련 기록</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="section-title">⚙️ 설정</div>
-        <div class="menu-item">
-          <div class="menu-icon">🌙</div>
-          <div>
-            <div class="menu-text">다크 모드</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">🔔</div>
-          <div>
-            <div class="menu-text">알림 설정</div>
-          </div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon">❓</div>
-          <div>
-            <div class="menu-text">도움말</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- 메인 컨텐츠 -->
-    <main class="main-content" id="mainContent">
-      <div class="logo-main">역사로</div>
-      <div class="logo-subtitle">AI가 찾아주는 정확한 역사적 근거</div>
-
-      <div class="search-container">
-        <input
-          type="text"
-          class="search-box"
-          placeholder="예: 세종 시대 내시 제도는 어떻게 운영되었나요?"
-          id="searchInput" />
-        <div class="voice-icon">🎤</div>
-        <div class="search-icon" onclick="performSearch()">🔍</div>
-      </div>
-
-      <div class="search-buttons">
-        <button class="search-btn" onclick="performSearch()">고증 검색</button>
-        <button class="search-btn">랜덤 탐색</button>
-      </div>
-
-      <div class="quick-features">
-        <div class="quick-feature">
-          <span>📸</span>
-          <span>이미지 업로드</span>
-        </div>
-        <div class="quick-feature">
-          <span>🎤</span>
-          <span>음성 검색</span>
-        </div>
-        <div class="quick-feature">
-          <span>📊</span>
-          <span>인기 검색어</span>
-        </div>
-      </div>
-    </main>
-
-    <!-- 검색 결과 페이지 -->
-    <div class="results-page" id="resultsPage">
-      <div class="results-header">검색 결과 약 1,247개 (0.42초)</div>
-
-      <div class="result-item">
-        <div class="result-url">sillok.history.go.kr › 세종실록</div>
-        <div class="result-title">세종실록 권12 - 내시부 제도 개편</div>
-        <div class="result-snippet">
-          세종 3년(1421) 5월 15일. 내시부(內侍府)의 제도를 개편하여 내시의 정원을 30명으로 정하고,
-          각각의 직무를 명확히 하였다. 내시는 왕의 측근에서 궁중 사무를 담당하며...
-        </div>
-        <div class="result-meta">신뢰도: 95% • 📅 1421.05.15 • 👑 세종</div>
-      </div>
-
-      <div class="result-item">
-        <div class="result-url">sillok.history.go.kr › 세종실록</div>
-        <div class="result-title">세종실록 권28 - 내시 품계 및 승진 체계</div>
-        <div class="result-snippet">
-          세종 7년(1425) 2월 3일. 내시의 품계를 정하여 정7품에서 종9품까지로 하고, 승진 체계를
-          마련하였다. 내시는 과거를 통해 선발하지 않고 왕이 직접 임명하는 것을 원칙으로...
-        </div>
-        <div class="result-meta">신뢰도: 92% • 📅 1425.02.03 • 👑 세종</div>
-      </div>
-
-      <div class="result-item">
-        <div class="result-url">classics.itkc.or.kr › 경국대전</div>
-        <div class="result-title">경국대전 이전 내시부 - 조직과 운영</div>
-        <div class="result-snippet">
-          내시부의 조직과 운영에 관한 법제가 정비되어, 내시의 임무와 권한이 명문화되었다. 궁중의
-          기밀 사무를 담당하며, 왕명 전달의 중요한 역할을 담당하였다...
-        </div>
-        <div class="result-meta">신뢰도: 88% • 📅 성종대 편찬 • 📚 법전</div>
+    <div id="root">
+      <!-- Loading Screen -->
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">역사로를 불러오는 중...</div>
       </div>
     </div>
-
-    <!-- 푸터 -->
-    <footer class="footer">
-      <div>© 2025 역사로(HistPath) - 국사편찬위원회 조선왕조실록 기반</div>
-    </footer>
-
+ 
+    <script type="module" src="/src/main.jsx"></script>
+ 
+    <!-- Remove loading screen when app is ready -->
     <script>
-      function toggleSidebar() {
-        const sidebar = document.querySelector(".sidebar");
-        const overlay = document.querySelector(".overlay");
-        const hamburger = document.querySelector(".hamburger");
-
-        sidebar.classList.toggle("active");
-        overlay.classList.toggle("active");
-        hamburger.classList.toggle("active");
-      }
-
-      function closeSidebar() {
-        const sidebar = document.querySelector(".sidebar");
-        const overlay = document.querySelector(".overlay");
-        const hamburger = document.querySelector(".hamburger");
-
-        sidebar.classList.remove("active");
-        overlay.classList.remove("active");
-        hamburger.classList.remove("active");
-      }
-
-      function performSearch() {
-        const mainContent = document.getElementById("mainContent");
-        const resultsPage = document.getElementById("resultsPage");
-        const searchInput = document.getElementById("searchInput");
-
-        if (searchInput.value.trim()) {
-          mainContent.style.display = "none";
-          resultsPage.classList.add("active");
-        }
-      }
-
-      // 엔터키로 검색
-      document.getElementById("searchInput").addEventListener("keypress", function (e) {
-        if (e.key === "Enter") {
-          performSearch();
-        }
+      // Hide loading screen when React app is loaded
+      window.addEventListener("load", function () {
+        setTimeout(() => {
+          document.body.classList.add("app-loaded");
+        }, 500);
       });
-
-      // ESC로 사이드바 닫기
-      document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") {
-          closeSidebar();
-        }
-      });
-
-      // 메뉴 아이템 클릭 효과
-      document.querySelectorAll(".menu-item").forEach((item) => {
-        item.addEventListener("click", function () {
-          // 간단한 시각적 피드백
-          this.style.background = "#e3f2fd";
-          setTimeout(() => {
-            this.style.background = "";
-          }, 200);
-        });
-      });
+ 
+      // Fallback: Hide loading screen after 3 seconds
+      setTimeout(() => {
+        document.body.classList.add("app-loaded");
+      }, 3000);
     </script>
   </body>
 </html>
