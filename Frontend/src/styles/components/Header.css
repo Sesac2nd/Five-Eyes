@@ -1,0 +1,119 @@
+/* Header Styles */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--header-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-primary);
+  z-index: 1000;
+  height: 70px;
+  transition: all 0.3s ease;
+}
+
+/* Dark mode specific header styling */
+.dark .header {
+  background: rgba(26, 26, 26, 0.95);
+  border-bottom-color: #404040;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  color: var(--text-primary);
+}
+
+.hamburger-btn:hover {
+  background: var(--bg-secondary);
+  transform: scale(1.05);
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: var(--accent-primary);
+  transform: scale(1.05);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.help-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.help-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--accent-primary);
+  transform: scale(1.1);
+}
+
+.login-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  color: var(--text-primary);
+}
+
+.login-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+/* Dark mode specific button styling */
+.dark .login-btn:hover {
+  background: var(--bg-tertiary);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 15px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .login-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}
