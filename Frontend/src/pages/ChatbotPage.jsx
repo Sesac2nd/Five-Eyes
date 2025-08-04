@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Mic, MicOff, Volume2, Copy, RotateCcw } from "lucide-react";
+import useVoiceSpeaker from "@/hooks/useVoiceSpeaker";
 import "@/styles/pages/ChatbotPage.css";
 
 function ChatbotPage() {
@@ -7,7 +8,8 @@ function ChatbotPage() {
     {
       id: 1,
       type: "bot",
-      content: "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요.",
+      content:
+        "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요.",
       timestamp: new Date(),
       keywords: ["조선왕조실록", "역사", "AI"],
     },
@@ -18,6 +20,7 @@ function ChatbotPage() {
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const { speak } = useVoiceSpeaker();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -115,6 +118,7 @@ function ChatbotPage() {
   const handleSpeakMessage = (content) => {
     // 실제 구현시 Speech Synthesis API 사용
     console.log("Speaking:", content);
+    speak(content);
   };
 
   const handleCopyMessage = (content) => {
@@ -134,7 +138,13 @@ function ChatbotPage() {
     ]);
   };
 
-  const suggestedQuestions = ["세종대왕이 가장 좋아한 음식은 무엇인가요?", "조선시대 궁중의 하루 일과는 어떠했나요?", "임진왜란 당시 의병 활동은 어떠했나요?", "영조의 균역법 개혁 배경을 알려주세요", "정조의 수원화성 건설 이유는 무엇인가요?"];
+  const suggestedQuestions = [
+    "세종대왕이 가장 좋아한 음식은 무엇인가요?",
+    "조선시대 궁중의 하루 일과는 어떠했나요?",
+    "임진왜란 당시 의병 활동은 어떠했나요?",
+    "영조의 균역법 개혁 배경을 알려주세요",
+    "정조의 수원화성 건설 이유는 무엇인가요?",
+  ];
 
   return (
     <div className="chatbot-page">
@@ -145,10 +155,14 @@ function ChatbotPage() {
         </div>
 
         <div className="chat-modes">
-          <button className={`mode-btn ${chatMode === "verification" ? "active" : ""}`} onClick={() => setChatMode("verification")}>
+          <button
+            className={`mode-btn ${chatMode === "verification" ? "active" : ""}`}
+            onClick={() => setChatMode("verification")}>
             📚 고증 검증
           </button>
-          <button className={`mode-btn ${chatMode === "creative" ? "active" : ""}`} onClick={() => setChatMode("creative")}>
+          <button
+            className={`mode-btn ${chatMode === "creative" ? "active" : ""}`}
+            onClick={() => setChatMode("creative")}>
             ✨ 창작 도우미
           </button>
         </div>
@@ -168,7 +182,10 @@ function ChatbotPage() {
                 {message.keywords && message.keywords.length > 0 && (
                   <div className="message-keywords">
                     {message.keywords.map((keyword, index) => (
-                      <button key={index} className="keyword-btn" onClick={() => handleKeywordClick(keyword)}>
+                      <button
+                        key={index}
+                        className="keyword-btn"
+                        onClick={() => handleKeywordClick(keyword)}>
                         {keyword}
                       </button>
                     ))}
@@ -184,10 +201,16 @@ function ChatbotPage() {
 
               {message.type === "bot" && (
                 <div className="message-actions">
-                  <button className="action-btn" onClick={() => handleSpeakMessage(message.content)} title="음성으로 듣기">
+                  <button
+                    className="action-btn"
+                    onClick={() => handleSpeakMessage(message.content)}
+                    title="음성으로 듣기">
                     <Volume2 size={16} />
                   </button>
-                  <button className="action-btn" onClick={() => handleCopyMessage(message.content)} title="복사하기">
+                  <button
+                    className="action-btn"
+                    onClick={() => handleCopyMessage(message.content)}
+                    title="복사하기">
                     <Copy size={16} />
                   </button>
                 </div>
@@ -216,7 +239,10 @@ function ChatbotPage() {
           <h3>추천 질문</h3>
           <div className="questions-list">
             {suggestedQuestions.map((question, index) => (
-              <button key={index} className="suggestion-btn" onClick={() => setInputMessage(question)}>
+              <button
+                key={index}
+                className="suggestion-btn"
+                onClick={() => setInputMessage(question)}>
                 {question}
               </button>
             ))}
@@ -228,14 +254,32 @@ function ChatbotPage() {
             <button className="action-btn" onClick={handleReset} title="대화 초기화">
               <RotateCcw size={18} />
             </button>
-            <button className={`action-btn ${isListening ? "active" : ""}`} onClick={toggleListening} title="음성 입력">
+            <button
+              className={`action-btn ${isListening ? "active" : ""}`}
+              onClick={toggleListening}
+              title="음성 입력">
               {isListening ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
           </div>
 
           <div className="input-wrapper">
-            <textarea ref={inputRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요..." : "창작하고 싶은 내용을 말씀해주세요..."}`} rows="1" className="chat-input" />
-            <button className="send-btn" onClick={handleSendMessage} disabled={!inputMessage.trim() || isLoading}>
+            <textarea
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={`${
+                chatMode === "verification"
+                  ? "역사적 사실에 대해 질문해보세요..."
+                  : "창작하고 싶은 내용을 말씀해주세요..."
+              }`}
+              rows="1"
+              className="chat-input"
+            />
+            <button
+              className="send-btn"
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}>
               <Send size={18} />
             </button>
           </div>

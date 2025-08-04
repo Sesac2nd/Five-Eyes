@@ -1,5 +1,19 @@
 import { Link } from "react-router-dom";
-import { Search, FileText, Camera, BarChart3, Crown, Scroll, FileX, File, Moon, Sun, Bell, HelpCircle, ExternalLink } from "lucide-react";
+import {
+  Search,
+  FileText,
+  Camera,
+  BarChart3,
+  Crown,
+  Scroll,
+  FileX,
+  File,
+  Moon,
+  Sun,
+  Bell,
+  HelpCircle,
+  ExternalLink,
+} from "lucide-react";
 import { useDarkMode } from "@/contexts/DarkModeContext";
 import "@/styles/components/Sidebar.css";
 
@@ -76,7 +90,9 @@ function Sidebar({ isOpen, onClose }) {
           <Scroll size={16} />
           사료 출처
         </div>
-        <div className="menu-item" onClick={() => handleExternalLink("https://sillok.history.go.kr")}>
+        <div
+          className="menu-item"
+          onClick={() => handleExternalLink("https://sillok.history.go.kr")}>
           <div className="menu-icon">
             <Scroll size={20} />
           </div>
@@ -109,7 +125,9 @@ function Sidebar({ isOpen, onClose }) {
             <div className="menu-desc">한국학중앙연구원 디지털장서각</div>
           </div>
         </div>
-        <div className="menu-item" onClick={() => handleExternalLink("https://kyujanggak.snu.ac.kr")}>
+        <div
+          className="menu-item"
+          onClick={() => handleExternalLink("https://kyujanggak.snu.ac.kr")}>
           <div className="menu-icon">
             <FileX size={20} />
           </div>
@@ -129,15 +147,9 @@ function Sidebar({ isOpen, onClose }) {
           <div className="menu-icon">{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</div>
           <div>
             <div className="menu-text">{isDarkMode ? "라이트 모드" : "다크 모드"}</div>
-            <div className="menu-desc">{isDarkMode ? "밝은 테마로 전환" : "어두운 테마로 전환"}</div>
-          </div>
-        </div>
-        <div className="menu-item">
-          <div className="menu-icon">
-            <Bell size={20} />
-          </div>
-          <div>
-            <div className="menu-text">알림 설정</div>
+            <div className="menu-desc">
+              {isDarkMode ? "밝은 테마로 전환" : "어두운 테마로 전환"}
+            </div>
           </div>
         </div>
         <Link to="/help" className="menu-item" onClick={handleMenuClick}>
