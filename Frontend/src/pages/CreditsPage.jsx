@@ -3,21 +3,33 @@ import "@/styles/pages/Pages.css";
 function CreditsPage() {
   const teamMembers = [
     {
-      name: "김철수",
-      role: "PM & Frontend Developer",
-      github: "https://github.com/kimcheolsu",
-      description: "React 개발 및 UI/UX 디자인",
+      name: "김호연",
+      role: "PM & Date Engineer",
+      github: "https://github.com/kimble125",
+      description: "데이터 엔지니어 분석, 프로젝트 관리",
     },
     {
-      name: "이영희",
-      role: "Backend Developer",
-      github: "https://github.com/leeyounghee",
-      description: "FastAPI 서버 개발 및 데이터베이스 설계",
+      name: "금선화",
+      role: "Backend Developer, AI Engineer",
+      github: "https://github.com/sunhwakum",
+      description: "OCR 모델 및 RAG 시스템 구축",
     },
     {
-      name: "박민수",
-      role: "AI Engineer",
-      github: "https://github.com/parkminsu",
+      name: "김근형",
+      role: "Backend Developer, AI Engineer",
+      github: "https://github.com/kimkeunhyeong",
+      description: "OCR 모델 및 RAG 시스템 구축",
+    },
+    {
+      name: "신지우",
+      role: "Frontend Developer",
+      github: "https://github.com/sjwjwu",
+      description: "React 기반 프론트엔드 개발 및 UI/UX 디자인",
+    },
+    {
+      name: "황선우",
+      role: "AI Engineer, Frontend Developer, Backend Developer",
+      github: "https://github.com/EraMorgett4",
       description: "OCR 모델 및 RAG 시스템 구축",
     },
   ];
@@ -25,7 +37,7 @@ function CreditsPage() {
   return (
     <div className="credits-page">
       <div className="page-header">
-        <h1>🧑‍💻만든이</h1>
+        <h1>🧑‍💻 만든이</h1>
         <p>역사로 프로젝트를 만든 팀을 소개합니다</p>
       </div>
 
@@ -48,7 +60,7 @@ function CreditsPage() {
         <div className="info-grid">
           <div className="info-item">
             <h3>개발 기간</h3>
-            <p>2025.07.25  - 2025.08.12 (3주)</p>
+            <p>📁 2025.07.25  - 2025.08.12 (3주)</p>
           </div>
           <div className="info-item">
             <h3>기술 스택</h3>
