@@ -17,6 +17,7 @@ function ChatbotPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -41,6 +42,7 @@ function ChatbotPage() {
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
     setIsLoading(true);
+    setShowSuggestions(false);  // 추천 질문 패널 숨기기
 
     setTimeout(() => {
       const botResponse = generateBotResponse(inputMessage);
@@ -132,6 +134,7 @@ function ChatbotPage() {
         keywords: [],
       },
     ]);
+    setShowSuggestions(true);  // 리셋 시 추천 질문 다시 보이도록 설정
   };
 
   const suggestedQuestions = [
@@ -150,16 +153,7 @@ function ChatbotPage() {
           <p>
             {chatMode === "verification"
               ? "조선왕조실록 기반 고증 검증 기능을 제공합니다."
-              : "조선왕조실록 기반 창작 지원 기능을 제공합니다."}{" "}
-            <span
-              style={{
-                marginLeft: 10,
-                fontWeight: "bold",
-                color: chatMode === "verification" ? "#4285f4" : "#ffa438",
-              }}
-            >
-              {chatMode === "verification" ? "고증 검증 모드" : "창작 도우미 모드"}
-            </span>
+              : "조선왕조실록 기반 창작 지원 기능을 제공합니다."}
           </p>
         </div>
 
@@ -255,20 +249,25 @@ function ChatbotPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="suggested-questions">
-          <h3>추천 질문</h3>
-          <div className="questions-list">
-            {suggestedQuestions.map((question, index) => (
-              <button
-                key={index}
-                className="suggestion-btn"
-                onClick={() => setInputMessage(question)}
-              >
-                {question}
-              </button>
-            ))}
+        {showSuggestions && (
+          <div className="suggested-questions">
+            <h3>추천 질문</h3>
+            <div className="questions-list">
+              {suggestedQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  className="suggestion-btn"
+                  onClick={() => {
+                    setInputMessage(question);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="chat-input-container">
           <div className="input-actions">
@@ -317,4 +316,3 @@ function ChatbotPage() {
 }
 
 export default ChatbotPage;
-

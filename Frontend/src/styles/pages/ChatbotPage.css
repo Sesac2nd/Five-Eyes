@@ -16,14 +16,26 @@
   transition: border-color 0.3s ease;
 }
 
-/* 고증 검증 모드일 때 */
-.chatbot-page.verification .chat-header {
-  border-color: #4285f4;
+/* 고증 검증 모드 추천 질문 버튼 스타일 */
+.chatbot-page.verification .suggestion-btn {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  color: #1976d2;
+}
+.chatbot-page.verification .suggestion-btn:hover {
+  background: #2196f3;
+  color: white;
 }
 
-/* 창작 도우미 모드일 때 */
-.chatbot-page.creative .chat-header {
-  border-color: #ffa438;
+/* 창작 도우미 모드 추천 질문 버튼 스타일 */
+.chatbot-page.creative .suggestion-btn {
+  background: #fff6e1;
+  border: 1px solid #ffa438;
+  color: #ffa438;
+}
+.chatbot-page.creative .suggestion-btn:hover {
+  background: #ffa438;
+  color: white;
 }
 
 .chat-title h1 {
@@ -55,12 +67,13 @@
   transition: all 0.3s ease;
 }
 
+/* 모드 버튼 기본 hover */
 .mode-btn:hover {
   border-color: #4285f4;
   background: #f8faff;
 }
 
-/* 활성화 시 공통 스타일 */
+/* 활성화된 버튼 기본 스타일 */
 .mode-btn.active {
   color: white;
 }
@@ -72,6 +85,13 @@
   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
 }
 
+/* 고증 검증 모드 버튼 hover 시 활성화 색상 유지 */
+.mode-btn.active.verification:hover {
+  background-color: #4285f4 !important;
+  border-color: #4285f4 !important;
+  color: white !important;
+}
+
 /* 창작 도우미 활성화 스타일 (주황색) */
 .mode-btn.active.creative {
   border-color: #ffa438;
@@ -79,15 +99,37 @@
   box-shadow: 0 2px 8px rgba(255, 164, 56, 0.35);
 }
 
+/* 창작 도우미 모드 버튼 hover 시 활성화 색상 유지 */
+.mode-btn.active.creative:hover {
+  background-color: #ffa438 !important;
+  border-color: #ffa438 !important;
+  color: white !important;
+}
 .chat-container {
-  flex: 1;
+  width: 100%;
+  max-width: 760px;      /* 최대 너비 제한 (예: 실제 사용 예시와 유사) */
+  min-width: 320px;      /* 최소 너비 */
+  min-height: 500px;     /* 최소 높이: 카드가 너무 작아지지 않게 */
+  max-height: 750px;     /* 필요하다면 최대 높이 추가 */
+  margin: 0 auto;        /* 수평 중앙 정렬 */
   display: flex;
   flex-direction: column;
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  position: relative;
 }
+
+/* 반응형(모바일) 대응 */
+@media (max-width: 820px) {
+  .chat-container {
+    max-width: 98vw;
+    min-width: unset;
+  }
+}
+
 
 .messages-container {
   flex: 1;
@@ -436,4 +478,11 @@
 
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.chatbot-page.verification .suggested-questions {
+  background-color: #e7f0ff;
+}
+.chatbot-page.creative .suggested-questions {
+  background-color: #fff4e5;
 }
