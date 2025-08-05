@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Search, FileText, Camera, BarChart3, Crown, Scroll, FileX, File, Moon, Sun, Bell, HelpCircle, ExternalLink } from "lucide-react";
+import { BookMarked, Search, Users, Lightbulb, Settings, FileText, Bot, Text, BarChart3, Crown, Scroll, FileX, File, Moon, Sun, Bell, HelpCircle, ExternalLink } from "lucide-react";
 import { useDarkMode } from "@/contexts/DarkModeContext";
 import "@/styles/components/Sidebar.css";
 
@@ -24,13 +24,13 @@ function Sidebar({ isOpen, onClose }) {
   return (
     <aside className={`sidebar ${isOpen ? "active" : ""}`}>
       <div className="sidebar-header">
-        <div className="sidebar-title">역사로 歷史路</div>
+        <div className="sidebar-title"> <BookMarked size={15} /> 역사로 歷史路</div>
         <div className="sidebar-subtitle">AI 기반 한국사 고증 검색 플랫폼</div>
       </div>
 
       <div className="sidebar-section">
         <div className="section-title">
-          <Search size={16} />
+          <Lightbulb size={16} />
           주요 기능
         </div>
         {/* <Link to="/search" className="menu-item" onClick={handleMenuClick}>
@@ -44,7 +44,7 @@ function Sidebar({ isOpen, onClose }) {
         </Link> */}
         <Link to="/chatbot" className="menu-item" onClick={handleMenuClick}>
           <div className="menu-icon">
-            <FileText size={20} />
+            <Bot size={20} />
           </div>
           <div>
             <div className="menu-text">챗봇</div>
@@ -53,7 +53,7 @@ function Sidebar({ isOpen, onClose }) {
         </Link>
         <Link to="/ocr" className="menu-item" onClick={handleMenuClick}>
           <div className="menu-icon">
-            <Camera size={20} />
+            <Text size={20} />
           </div>
           <div>
             <div className="menu-text">OCR 분석</div>
@@ -78,7 +78,7 @@ function Sidebar({ isOpen, onClose }) {
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://sillok.history.go.kr")}>
           <div className="menu-icon">
-            <Scroll size={20} />
+            <FileText size={20} />
           </div>
           <div>
             <div className="menu-text">
@@ -100,7 +100,7 @@ function Sidebar({ isOpen, onClose }) {
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://jsg.aks.ac.kr")}>
           <div className="menu-icon">
-            <File size={20} />
+            <FileText size={20} />
           </div>
           <div>
             <div className="menu-text">
@@ -111,7 +111,7 @@ function Sidebar({ isOpen, onClose }) {
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://kyujanggak.snu.ac.kr")}>
           <div className="menu-icon">
-            <FileX size={20} />
+            <FileText size={20} />
           </div>
           <div>
             <div className="menu-text">
@@ -123,7 +123,7 @@ function Sidebar({ isOpen, onClose }) {
       </div>
 
       <div className="sidebar-section">
-        <div className="section-title">⚙️ 설정</div>
+        <div className="section-title"> <Settings size={16} /> 설정</div>
         {/* 다크모드 토글 버튼 - 수정된 부분 */}
         <div className="menu-item" onClick={handleDarkModeToggle}>
           <div className="menu-icon">{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</div>
@@ -150,7 +150,7 @@ function Sidebar({ isOpen, onClose }) {
         </Link>
         <Link to="/credits" className="menu-item" onClick={handleMenuClick}>
           <div className="menu-icon">
-            <File size={20} />
+            <Users size={20} />
           </div>
           <div>
             <div className="menu-text">만든이</div>
