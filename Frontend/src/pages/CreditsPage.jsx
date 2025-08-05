@@ -37,43 +37,53 @@ function CreditsPage() {
   return (
     <div className="credits-page">
       <div className="page-header">
-        <h1>🧑‍💻 만든이</h1>
+        <h1 style={{ fontWeight: "bold" }}>🧑‍💻 만든이</h1>
         <p>역사로 프로젝트를 만든 팀을 소개합니다</p>
       </div>
 
       <div className="team-grid">
         {teamMembers.map((member, index) => (
           <div key={index} className="member-card">
-            <div className="member-avatar">{member.name.charAt(0)}</div>
+            {/* 아바타(동그라미 부분) 완전히 제거됨 */}
             <h3>{member.name}</h3>
             <p className="member-role">{member.role}</p>
             <p className="member-desc">{member.description}</p>
-            <a href={member.github} target="_blank" rel="noopener noreferrer" className="github-link">
+            <a
+              href={member.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="github-link"
+            >
               GitHub
             </a>
           </div>
         ))}
       </div>
 
-      <div className="project-info">
-        <h2>프로젝트 정보</h2>
-        <div className="info-grid">
-          <div className="info-item">
-            <h3>개발 기간</h3>
-            <p>📁 2025.07.25  - 2025.08.12 (3주)</p>
-          </div>
-          <div className="info-item">
-            <h3>기술 스택</h3>
-            <p>React, FastAPI, Azure AI, PostgreSQL</p>
-          </div>
-          <div className="info-item">
-            <h3>데이터 출처</h3>
-            <p>국사편찬위원회 조선왕조실록</p>
-          </div>
+      <div className="project-info" style={{ margin: "64px 0 32px" }}>
+        <h2>🗂️프로젝트 info.</h2>
+        <div className="project-details" style={{ lineHeight: 2, fontSize: "1.08rem" }}>
+          <p>
+            <strong>개발 기간:</strong> 2025.07.25 - 2025.08.12 (3주)
+          </p>
+          <p>
+            <strong>기술 스택:</strong> React, Azure AI, PostgreSQL
+          </p>
+          <p>
+            <strong>데이터 출처:</strong> 국사편찬위원회 조선왕조실록
+          </p>
+          <p>
+            <strong>서비스 목적:</strong>
+            <ul style={{ marginTop: 0, marginBottom: 0, paddingLeft: "1.2em" }}>
+              <li>창작물 고증 정확도 향상</li>
+              <li>사료 접근성 개선을 통한 역사 지식 대중화</li>
+              <li>한국사 콘텐츠의 글로벌 경쟁력 강화</li>
+            </ul>
+          </p>
         </div>
       </div>
 
-      <div className="disclaimer">
+      <div className="disclaimer" style={{ marginTop: 32 }}>
         <h2>서비스 원칙 및 책임 한계</h2>
         <div className="disclaimer-content">
           <p>본 서비스는 교육 및 연구 목적으로 제작되었습니다.</p>
