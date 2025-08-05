@@ -33,7 +33,7 @@ function Sidebar({ isOpen, onClose }) {
           <Search size={16} />
           주요 기능
         </div>
-        <Link to="/search" className="menu-item" onClick={handleMenuClick}>
+        {/* <Link to="/search" className="menu-item" onClick={handleMenuClick}>
           <div className="menu-icon">
             <Search size={20} />
           </div>
@@ -41,7 +41,7 @@ function Sidebar({ isOpen, onClose }) {
             <div className="menu-text">고증 검색</div>
             <div className="menu-desc">자연어로 역사적 사실 검색</div>
           </div>
-        </Link>
+        </Link> */}
         <Link to="/chatbot" className="menu-item" onClick={handleMenuClick}>
           <div className="menu-icon">
             <FileText size={20} />
@@ -60,7 +60,7 @@ function Sidebar({ isOpen, onClose }) {
             <div className="menu-desc">고문서 이미지 텍스트 추출</div>
           </div>
         </Link>
-        <div className="menu-item">
+        {/* <div className="menu-item">
           <div className="menu-icon">
             <BarChart3 size={20} />
           </div>
@@ -68,7 +68,7 @@ function Sidebar({ isOpen, onClose }) {
             <div className="menu-text">리포트 생성</div>
             <div className="menu-desc">고증 근거 PDF 다운로드</div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <div className="sidebar-section">
@@ -132,14 +132,14 @@ function Sidebar({ isOpen, onClose }) {
             <div className="menu-desc">{isDarkMode ? "밝은 테마로 전환" : "어두운 테마로 전환"}</div>
           </div>
         </div>
-        <div className="menu-item">
+        {/* <div className="menu-item">
           <div className="menu-icon">
             <Bell size={20} />
           </div>
           <div>
             <div className="menu-text">알림 설정</div>
           </div>
-        </div>
+        </div> */}
         <Link to="/help" className="menu-item" onClick={handleMenuClick}>
           <div className="menu-icon">
             <HelpCircle size={20} />
@@ -153,7 +153,7 @@ function Sidebar({ isOpen, onClose }) {
             <File size={20} />
           </div>
           <div>
-            <div className="menu-text">만든 이</div>
+            <div className="menu-text">만든이</div>
           </div>
         </Link>
       </div>

@@ -45,7 +45,7 @@ const navigation = [
     description: "서비스 사용법 안내",
   },
   {
-    text: "만든 이",
+    text: "만든이",
     path: "/credits",
     element: <CreditsPage />,
     icon: "👥",
