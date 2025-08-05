@@ -1,0 +1,55 @@
+# Azure 보안 파일들
+config.json
+azure_config*.json
+*_azure_ocr_*.json
+*_visualization_*.png
+*.env
+.env.local
+
+# Azure Document Intelligence 결과 파일들
+태조실록_*_azure_ocr_*.json
+태조실록_*_visualization_*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDE 설정
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+
+# 개발 도구
+AzuriteConfig/
+__azurite_db_table__.json
+
+# 운영체제
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 로그 파일
+*.log
+logs/
+
+# 임시 파일
+*.tmp
+*.temp
+*~

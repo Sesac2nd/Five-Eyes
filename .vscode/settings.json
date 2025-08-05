@@ -1,0 +1,9 @@
+{
+  "python.analysis.extraPaths": ["한자"],
+  "git.scanRepositories": ["https://github.com/Sesac2nd/Five-Eyes"],
+  "githubPullRequests.remotes": [
+    "origin",
+    "upstream",
+    "https://github.com/Sesac2nd/Five-Eyes"
+  ]
+}
