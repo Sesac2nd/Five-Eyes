@@ -271,7 +271,7 @@ def get_text_completion_result(
         # 1. 관련 문서 검색
         doc_search_keywords = extract_keyword_from_query(user_query, OAI_client, keyword_model)
         relevant_docs = get_relevant_documents(user_query, search_client, top_k=3 if is_verify else 5)
-
+        
         if not relevant_docs:
             relevant_docs = get_relevant_documents(" ".join(doc_search_keywords), search_client)
 
@@ -381,6 +381,7 @@ def get_relevant_documents(query: str, search_client:SearchClient, top_k: int = 
                 "title": [],  # 빈 배열로 설정, 추후 column 설정 필요.
                 "king": [],  # 빈 배열로 설정
                 "date": [],  # 빈 배열로 설정
+                "chunk_id": result.get("chunk_id", ""), # chunk_id for page_mapping
                 "score": result.get("@search.score", 0),
                 "reranker_score": result.get("@search.rerankerScore", 0),
                 "highlights": result.get("@search.highlights", {}),
