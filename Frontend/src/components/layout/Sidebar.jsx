@@ -30,7 +30,7 @@ function Sidebar({ isOpen, onClose }) {
 
       <div className="sidebar-section">
         <div className="section-title">
-          <Lightbulb size={16} />
+          <Lightbulb size={20} />
           주요 기능
         </div>
         {/* <Link to="/search" className="menu-item" onClick={handleMenuClick}>
@@ -73,49 +73,49 @@ function Sidebar({ isOpen, onClose }) {
 
       <div className="sidebar-section">
         <div className="section-title">
-          <Scroll size={16} />
+          <Scroll size={20} />
           사료 출처
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://sillok.history.go.kr")}>
           <div className="menu-icon">
-            <FileText size={20} />
+            <ExternalLink size={20} />
           </div>
           <div>
             <div className="menu-text">
-              조선왕조실록 <ExternalLink size={12} />
+              조선왕조실록 
             </div>
             <div className="menu-desc">472년간의 공식 기록</div>
           </div>
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://sjw.history.go.kr")}>
           <div className="menu-icon">
-            <FileText size={20} />
+            <ExternalLink size={20} />
           </div>
           <div>
             <div className="menu-text">
-              승정원일기 <ExternalLink size={12} />
+              승정원일기 
             </div>
             <div className="menu-desc">왕의 일상 기록</div>
           </div>
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://jsg.aks.ac.kr")}>
           <div className="menu-icon">
-            <FileText size={20} />
+            <ExternalLink size={20} />
           </div>
           <div>
             <div className="menu-text">
-              장서각 <ExternalLink size={12} />
+              장서각 
             </div>
             <div className="menu-desc">한국학중앙연구원 디지털장서각</div>
           </div>
         </div>
         <div className="menu-item" onClick={() => handleExternalLink("https://kyujanggak.snu.ac.kr")}>
           <div className="menu-icon">
-            <FileText size={20} />
+            <ExternalLink size={20} />
           </div>
           <div>
             <div className="menu-text">
-              규장각 <ExternalLink size={12} />
+              규장각 
             </div>
             <div className="menu-desc">서울대학교 규장각한국학연구원</div>
           </div>
@@ -123,7 +123,7 @@ function Sidebar({ isOpen, onClose }) {
       </div>
 
       <div className="sidebar-section">
-        <div className="section-title"> <Settings size={16} /> 설정</div>
+        <div className="section-title"> <Settings size={20} /> 설정</div>
         {/* 다크모드 토글 버튼 - 수정된 부분 */}
         <div className="menu-item" onClick={handleDarkModeToggle}>
           <div className="menu-icon">{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</div>

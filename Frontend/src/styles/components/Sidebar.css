@@ -44,7 +44,7 @@
 }
 
 .section-title {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: bold;
   color: var(--text-primary);
   margin-bottom: 15px;
@@ -87,7 +87,7 @@
 }
 
 .menu-text {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-primary);
   display: flex;
   align-items: center;

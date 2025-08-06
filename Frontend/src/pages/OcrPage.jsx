@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, RotateCcw, Play, FileImage, AlertCircle } from "lucide-react";
+import { Upload, RotateCcw, Play, FileImage, AlertCircle, Focus  } from "lucide-react";
 import "@/styles/pages/OcrPage.css";
 
 function OcrPage() {
@@ -81,19 +81,19 @@ function OcrPage() {
         <div className="info-grid">
           <div className="info-item">
             <h4>1. 이미지 준비</h4>
-            <p>조선왕조실록 원문 이미지나 기타 고문서 이미지를 준비하세요</p>
+            <p>조선왕조실록 원문 이미지나 기타 고문서 이미지를 준비하세요.</p>
           </div>
           <div className="info-item">
             <h4>2. 모델 선택</h4>
-            <p>한문 텍스트는 PaddleOCR, 일반 문서는 Azure 모델을 권장합니다</p>
+            <p>한문 텍스트는 PaddleOCR, 일반 문서는 Azure 모델을 권장합니다.</p>
           </div>
           <div className="info-item">
             <h4>3. 결과 확인</h4>
-            <p>추출된 텍스트를 실록 데이터베이스와 비교하여 정확도를 확인하세요</p>
+            <p>추출된 텍스트를 실록 데이터베이스와 비교하여 정확도를 확인하세요.</p>
           </div>
         </div>
       </div>
-      
+
       <div className="ocr-container">
         <div className="ocr-controls">
           <div className="model-selection">
@@ -160,7 +160,7 @@ function OcrPage() {
               ) : (
                 <div className="upload-placeholder">
                   <FileImage size={48} />
-                  <p>이미지를 드래그하거나 클릭하여 업로드하세요</p>
+                  <p>이미지를 드래그하거나 클릭하여 업로드하세요.</p>
                   <p className="upload-hint">지원 형식: JPG, PNG, GIF (최대 10MB)</p>
                 </div>
               )}
@@ -168,7 +168,7 @@ function OcrPage() {
           </div>
 
           <div className="result-section">
-            <h3>분석 결과</h3>
+            <h3> <Focus  size={20} />분석 결과</h3>
             <div className="result-area">
               {ocrResult ? (
                 <div className="result-content">
