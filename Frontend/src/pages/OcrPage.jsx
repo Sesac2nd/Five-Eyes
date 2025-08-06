@@ -74,7 +74,26 @@ function OcrPage() {
         <h1>OCR 문서 분석</h1>
         <p>고문서 이미지에서 한문 텍스트를 추출하고 조선왕조실록과 비교 검증합니다</p>
       </div>
+    
 
+    <div className="ocr-info">
+        <h3>사용 안내</h3>
+        <div className="info-grid">
+          <div className="info-item">
+            <h4>1. 이미지 준비</h4>
+            <p>조선왕조실록 원문 이미지나 기타 고문서 이미지를 준비하세요</p>
+          </div>
+          <div className="info-item">
+            <h4>2. 모델 선택</h4>
+            <p>한문 텍스트는 PaddleOCR, 일반 문서는 Azure 모델을 권장합니다</p>
+          </div>
+          <div className="info-item">
+            <h4>3. 결과 확인</h4>
+            <p>추출된 텍스트를 실록 데이터베이스와 비교하여 정확도를 확인하세요</p>
+          </div>
+        </div>
+      </div>
+      
       <div className="ocr-container">
         <div className="ocr-controls">
           <div className="model-selection">
@@ -170,23 +189,7 @@ function OcrPage() {
         </div>
       </div>
 
-      <div className="ocr-info">
-        <h3>사용 안내</h3>
-        <div className="info-grid">
-          <div className="info-item">
-            <h4>1. 이미지 준비</h4>
-            <p>조선왕조실록 원문 이미지나 기타 고문서 이미지를 준비하세요</p>
-          </div>
-          <div className="info-item">
-            <h4>2. 모델 선택</h4>
-            <p>한문 텍스트는 PaddleOCR, 일반 문서는 Azure 모델을 권장합니다</p>
-          </div>
-          <div className="info-item">
-            <h4>3. 결과 확인</h4>
-            <p>추출된 텍스트를 실록 데이터베이스와 비교하여 정확도를 확인하세요</p>
-          </div>
-        </div>
-      </div>
+      
     </div>
   );
 }
