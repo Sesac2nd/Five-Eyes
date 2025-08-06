@@ -226,7 +226,7 @@ def get_text_completion_result(
         is_verify: bool = False 
     ) -> Dict[str, Union[List, str]]:
     """
-    챗봇 응답 생성 메인 함수
+    챗봇 응답 생성 메인 함수 (Azure Search 통합 버전)
     
     Args:
         Query: {"query": "사용자 질문", "context": "이전 대화 컨텍스트(선택)"}
@@ -236,7 +236,6 @@ def get_text_completion_result(
         keyword_model : keyword 추출에 사용할 Azure OpenAI 모델 이름
         is_verify: True면 고증 모드, False면 창작 모드
 
-    
     Returns:
         {
             "query_suggestions": [...],  # 컨텍스트 없을 때만
@@ -268,22 +267,7 @@ def get_text_completion_result(
         return result
     
     try:
-        # 1. 관련 문서 검색
-        doc_search_keywords = extract_keyword_from_query(user_query, OAI_client, keyword_model)
-        relevant_docs = get_relevant_documents(user_query, search_client, top_k=3 if is_verify else 5)
-        
-        if not relevant_docs:
-            relevant_docs = get_relevant_documents(" ".join(doc_search_keywords), search_client)
-
-        # 2. 컨텍스트 구성
-        context_text = ""
-        if relevant_docs:
-            context_text = "\n".join([
-                f"[출처: {doc['title']}]\n{doc['content']}" 
-                for doc in relevant_docs[:3]
-            ])
-        
-        # 3. 시스템 프롬프트 설정
+        # 1. 모드에 따른 시스템 프롬프트 설정
         if is_verify:
             system_prompt = """당신은 역사 전문가입니다. 다음 규칙을 엄격히 준수하세요:
                 1. 제공된 문서에 명시된 내용만을 기반으로 답변하세요
@@ -292,52 +276,42 @@ def get_text_completion_result(
                 4. 모든 답변에 구체적인 출처를 포함하세요
                 5. 문서 범위를 벗어나는 질문에는 "관련 자료가 부족합니다"라고 답변하세요
             """
+            strictness = 4  # 높은 엄격성
         else:
             system_prompt = "당신은 역사 전문가입니다. 제공된 자료를 기반으로 하되, 창작을 위한 상상력을 발휘하여 답변하세요."
+            strictness = 2  # 낮은 엄격성
         
-        # 4. 사용자 프롬프트 구성
-        user_prompt = f"""
-            관련 자료:
-            {context_text}
-
-            사용자 질문: {user_query}
-
-        """
-        if is_verify:
-            user_prompt += """
-            규칙:
-            - 위 자료에 명시된 내용만 사용하여 답변하세요
-            - 자료에 없는 내용은 "자료에서 찾을 수 없음"이라고 명시하세요
-            - 추측이나 일반적 지식 사용 금지
-            - 답변 마지막에 참조한 출처를 명시하세요
-        """
-        else:
-            user_prompt += """
-            위 자료를 기반으로 창작적인 답변을 생성해주세요.
-        """
-        # 5. 모드에 따른 파라미터 설정
-        if is_verify:
-            temperature = 0.1        # 매우 낮은 창의성
-            max_tokens = 800        # 간결한 답변 강제
-            top_p = 0.2            # 보수적 토큰 선택
-            presence_penalty = 0.8  # 문서 범위 벗어나기 억제
-        else:
-            temperature = 0.7
-            max_tokens = 1200
-            top_p = 0.9
-            presence_penalty = 0.2
+        # 2. data_sources 설정
+        data_sources = [{
+            "type": "azure_search",
+            "parameters": {
+                "endpoint": search_endpoint,
+                "index_name": search_index,
+                "query_type": "semantic",
+                "in_scope": True,
+                "strictness": strictness,  # 핵심: 엄격성 설정
+                "top_n_documents": 5,
+                "authentication": {
+                        "key": search_key,
+                        "type": "api_key"
+                    }
+            }
+        }]
         
-        # 6. OpenAI API 호출
+        # 3. 모드에 따른 파라미터 설정
+        temperature = 0.3 if is_verify else 0.7
+        max_tokens = 1000 if is_verify else 1200
+        
+        # 4. Azure OpenAI API 호출 (data_sources 포함)
         response = OAI_client.chat.completions.create(
             model=chat_model,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_query}
             ],
+            extra_body={"data_sources" : data_sources},  # 핵심: data_sources 추가
             temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            presence_penalty=presence_penalty
+            max_tokens=max_tokens
         )
         
         OAI_response = response.choices[0].message.content
@@ -345,19 +319,26 @@ def get_text_completion_result(
             result["response"] = "죄송합니다. 일시적인 오류가 발생했습니다. 다시 시도해주세요."
             return result
         
-        # 7. 키워드 추출
+        # 5. 키워드 추출 (응답에서만)
         keywords = extract_keywords_from_response(OAI_response, OAI_client, keyword_model)
         
-        # 8. 출처 정보 구성
-        sources = format_sources(relevant_docs)
+        # 6. 출처 정보 추출 (Azure OpenAI가 자동 제공)
+        sources = []
+
+        if hasattr(response.choices[0].message, 'context'):
+            # Azure OpenAI가 제공하는 출처 정보 추출
+            context_data = response.choices[0].message.context
+            if context_data and 'citations' in context_data:
+                sources = [citation.get('title', 'Unknown') for citation in context_data['citations']]
         
         result.update({
             "response": OAI_response,
-            "doc_search_keywords": doc_search_keywords,
-            "resp_keywords" : keywords,
+            "resp_keywords": keywords,
             "sources": sources
         })
-        
+        print("="*100)
+        print(OAI_response)
+        print("="*100)
     except Exception as e:
         print(f"응답 생성 오류: {traceback.format_exc() if DEBUG_FLAG else e}")
         result["response"] = "죄송합니다. 일시적인 오류가 발생했습니다. 다시 시도해주세요."
