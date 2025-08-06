@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Mic, MicOff, Volume2, Copy, RotateCcw } from "lucide-react";
+import useTTS from "@/hooks/useTTS";
+import useSTT from "@/hooks/useSTT";
 import "@/styles/pages/ChatbotPage.css";
 
 function ChatbotPage() {
@@ -15,11 +17,16 @@ function ChatbotPage() {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
-  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // TTS/STT 훅 사용
+  const { speak } = useTTS();
+  const { startRecording, stopRecording, isRecording, transcript, error: sttError } = useSTT();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,6 +35,27 @@ function ChatbotPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // STT 결과가 있을 때 input에 반영
+  useEffect(() => {
+    if (transcript) {
+      setInputMessage(transcript);
+      inputRef.current?.focus();
+      showToast("음성이 텍스트로 변환되었습니다!");
+    }
+  }, [transcript]);
+
+  // STT 에러 처리
+  useEffect(() => {
+    if (sttError) {
+      showToast(`음성 인식 오류: ${sttError}`, "error");
+    }
+  }, [sttError]);
+
+  const showToast = (message, type = "success") => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -42,8 +70,8 @@ function ChatbotPage() {
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
     setIsLoading(true);
-    setShowSuggestions(false); // 추천 질문 패널 숨기기
 
+    // 시뮬레이션을 위한 지연
     setTimeout(() => {
       const botResponse = generateBotResponse(inputMessage);
       setMessages((prev) => [...prev, botResponse]);
@@ -63,8 +91,8 @@ function ChatbotPage() {
 
 **출처**: 조선왕조실록 > 세종실록 > 세종 3년 5월 15일
 **신뢰도**: 95%
-**관련 키워드**: 내시부, 고증, 실록`,
-        keywords: ["내시부", "고증", "실록"],
+**관련 키워드**: 내시부, 궁중제도, 세종대왕`,
+        keywords: ["내시부", "궁중제도", "세종대왕", "조선왕조실록", "세종실록"],
         sources: ["세종실록 12권", "경국대전"],
       },
       creative: {
@@ -81,7 +109,7 @@ function ChatbotPage() {
 - 개인의 성장과 역사적 사명감
 
 **추천 참고 사료**: 세종실록, 경국대전, 승정원일기`,
-        keywords: ["창작", "스토리", "아이디어"],
+        keywords: ["창작", "시놉시스", "갈등구조", "캐릭터", "세종시대"],
         sources: ["세종실록", "승정원일기"],
       },
     };
@@ -109,16 +137,68 @@ function ChatbotPage() {
     }
   };
 
-  const toggleListening = () => {
-    setIsListening(!isListening);
+  // TTS 기능 구현 - 실제 음성 출력
+  const handleSpeakMessage = async (content) => {
+    if (isSpeaking) {
+      showToast("이미 음성 출력 중입니다.", "warning");
+      return;
+    }
+
+    try {
+      setIsSpeaking(true);
+
+      // 마크다운 형식 및 특수 문자 제거
+      const cleanContent = content
+        .replace(/\*\*/g, "") // ** 제거
+        .replace(/📚|✨|🎯/g, "") // 이모지 제거
+        .replace(/\n+/g, " ") // 개행 문자를 공백으로
+        .replace(/\s+/g, " ") // 연속 공백 정리
+        .trim();
+
+      console.log("🎵 TTS 시작:", cleanContent.substring(0, 50) + "...");
+
+      // useTTS 훅의 speak 함수 호출
+      await speak(cleanContent);
+
+      console.log("🎵 TTS 완료");
+      showToast("음성 출력이 완료되었습니다!");
+    } catch (error) {
+      console.error("TTS 오류:", error);
+      showToast("음성 출력에 실패했습니다.", "error");
+    } finally {
+      setIsSpeaking(false);
+    }
   };
 
-  const handleSpeakMessage = (content) => {
-    console.log("Speaking:", content);
+  // STT 기능 구현 - 실제 음성 인식
+  const toggleListening = async () => {
+    if (isRecording) {
+      try {
+        await stopRecording();
+        showToast("음성 인식을 중지했습니다.");
+      } catch (error) {
+        console.error("STT 중지 오류:", error);
+        showToast("음성 인식 중지에 실패했습니다.", "error");
+      }
+    } else {
+      try {
+        await startRecording();
+        showToast("음성 인식을 시작합니다. 말씀해 주세요!", "info");
+      } catch (error) {
+        console.error("STT 시작 오류:", error);
+        showToast("마이크 접근 권한이 필요합니다.", "error");
+      }
+    }
   };
 
-  const handleCopyMessage = (content) => {
-    navigator.clipboard.writeText(content);
+  const handleCopyMessage = async (content) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      showToast("클립보드에 복사되었습니다!");
+    } catch (error) {
+      console.error("복사 오류:", error);
+      showToast("복사에 실패했습니다.", "error");
+    }
   };
 
   const handleReset = () => {
@@ -126,15 +206,12 @@ function ChatbotPage() {
       {
         id: 1,
         type: "bot",
-        content:
-          chatMode === "verification"
-            ? "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요."
-            : "안녕하세요! 저는 조선왕조실록 기반 창작 지원 AI입니다. 창작하고 싶은 이야기를 말씀해 주세요.",
+        content: "대화가 초기화되었습니다. 새로운 질문을 해주세요!",
         timestamp: new Date(),
         keywords: [],
       },
     ]);
-    setShowSuggestions(true); // 리셋 시 추천 질문 다시 보이도록 설정
+    showToast("대화가 초기화되었습니다.");
   };
 
   const suggestedQuestions = [
@@ -146,25 +223,31 @@ function ChatbotPage() {
   ];
 
   return (
-    <div className={`chatbot-page ${chatMode}`}>
-      <div className={`chat-header ${chatMode}`}>
+    <div className="chatbot-page">
+      {/* 토스트 메시지 */}
+      {toastMessage && (
+        <div
+          className={`toast-message ${
+            toastMessage.includes("오류") || toastMessage.includes("실패") ? "error" : "success"
+          }`}>
+          {toastMessage}
+        </div>
+      )}
+
+      <div className="chat-header">
         <div className="chat-title">
           <h1>역사 AI 챗봇</h1>
-          <p>
-            {chatMode === "verification"
-              ? "조선왕조실록 기반 고증 검증 기능을 제공합니다."
-              : "조선왕조실록 기반 창작 지원 기능을 제공합니다."}
-          </p>
+          <p>조선왕조실록 기반 질의응답 및 창작 지원</p>
         </div>
 
         <div className="chat-modes">
           <button
-            className={`mode-btn ${chatMode === "verification" ? "active verification" : ""}`}
+            className={`mode-btn ${chatMode === "verification" ? "active" : ""}`}
             onClick={() => setChatMode("verification")}>
             📚 고증 검증
           </button>
           <button
-            className={`mode-btn ${chatMode === "creative" ? "active creative" : ""}`}
+            className={`mode-btn ${chatMode === "creative" ? "active" : ""}`}
             onClick={() => setChatMode("creative")}>
             ✨ 창작 도우미
           </button>
@@ -205,9 +288,10 @@ function ChatbotPage() {
               {message.type === "bot" && (
                 <div className="message-actions">
                   <button
-                    className="action-btn"
+                    className={`action-btn ${isSpeaking ? "speaking" : ""}`}
                     onClick={() => handleSpeakMessage(message.content)}
-                    title="음성으로 듣기">
+                    title="음성으로 듣기"
+                    disabled={isSpeaking}>
                     <Volume2 size={16} />
                   </button>
                   <button
@@ -238,24 +322,19 @@ function ChatbotPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {showSuggestions && (
-          <div className="suggested-questions">
-            <h3>추천 질문</h3>
-            <div className="questions-list">
-              {suggestedQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  className="suggestion-btn"
-                  onClick={() => {
-                    setInputMessage(question);
-                    setShowSuggestions(false);
-                  }}>
-                  {question}
-                </button>
-              ))}
-            </div>
+        <div className="suggested-questions">
+          <h3>추천 질문</h3>
+          <div className="questions-list">
+            {suggestedQuestions.map((question, index) => (
+              <button
+                key={index}
+                className="suggestion-btn"
+                onClick={() => setInputMessage(question)}>
+                {question}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         <div className="chat-input-container">
           <div className="input-actions">
@@ -263,10 +342,11 @@ function ChatbotPage() {
               <RotateCcw size={18} />
             </button>
             <button
-              className={`action-btn ${isListening ? "active" : ""}`}
+              className={`action-btn ${isRecording ? "recording" : ""}`}
               onClick={toggleListening}
-              title="음성 입력">
-              {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+              title={isRecording ? "음성 입력 중지" : "음성 입력 시작"}
+              disabled={isLoading}>
+              {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
           </div>
 
@@ -283,14 +363,23 @@ function ChatbotPage() {
               }`}
               rows="1"
               className="chat-input"
+              disabled={isRecording}
             />
             <button
               className="send-btn"
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}>
+              disabled={!inputMessage.trim() || isLoading || isRecording}>
               <Send size={18} />
             </button>
           </div>
+
+          {/* 음성 인식 상태 표시 */}
+          {isRecording && (
+            <div className="recording-indicator">
+              <div className="recording-animation"></div>
+              <span>음성을 인식하고 있습니다...</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
