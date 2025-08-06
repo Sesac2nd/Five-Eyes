@@ -9,8 +9,7 @@ function ChatbotPage() {
     {
       id: 1,
       type: "bot",
-      content:
-        "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요.",
+      content: "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요.",
       timestamp: new Date(),
       keywords: ["조선왕조실록", "역사", "AI"],
     },
@@ -20,6 +19,8 @@ function ChatbotPage() {
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const toastTimeoutRef = useRef(null);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -52,9 +53,84 @@ function ChatbotPage() {
     }
   }, [sttError]);
 
-  const showToast = (message, type = "success") => {
+  // ESC 키로 TTS 중단 처리 추가
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isSpeaking) {
+        // TTS 중단
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+        // 상태 초기화 (이 때 useEffect가 트리거되어 완료 토스트가 표시될 수 있음)
+        setIsSpeaking(false);
+        // 별도의 중단 토스트 표시 (기존 토스트를 덮어씀)
+        setTimeout(() => {
+          showToast("🛑 음성 출력이 중단되었습니다.", "warning", 2000); // 2초 후 제거
+        }, 100); // 약간의 지연을 두어 상태 변화 useEffect 이후에 실행
+        console.log("🛑 ESC로 TTS 중단 및 상태 초기화");
+      }
+    };
+
+    // 전역 키보드 이벤트 리스너 등록
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      // 컴포넌트 언마운트 시 타이머 정리
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, [isSpeaking]); // isSpeaking 의존성 추가
+
+  // TTS 상태 변화 감지 및 토스트 표시
+  useEffect(() => {
+    if (isSpeaking) {
+      showToast("🎵 음성 출력 중... (ESC 키로 중단 가능)", "info", 0); // 지속적 표시
+    } else {
+      // TTS가 중단되거나 완료되면 2초 후 토스트 숨김 (단, 다른 메시지가 있으면 유지)
+      if (toastMessage.includes("음성 출력 중")) {
+        showToast("🎵 음성 출력이 완료되었습니다.", "success", 2000); // 2초 후 자동 제거
+      }
+    }
+  }, [isSpeaking]);
+
+  // STT 상태 변화 감지 및 토스트 표시
+  useEffect(() => {
+    if (isRecording) {
+      showToast("🎤 음성을 인식하고 있습니다... (다시 클릭하여 중지)", "info", 0); // 지속적 표시
+    } else {
+      // STT가 중단되면 2초 후 토스트 숨김 (단, 다른 메시지가 있으면 유지)
+      if (toastMessage.includes("음성을 인식하고")) {
+        showToast("🎤 음성 인식이 완료되었습니다.", "success", 2000); // 2초 후 자동 제거
+      }
+    }
+  }, [isRecording]);
+
+  const showToast = (message, type = "success", duration = 3000) => {
+    // 기존 타이머 클리어
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
     setToastMessage(message);
-    setTimeout(() => setToastMessage(""), 3000);
+    setToastType(type);
+
+    // 지속적 표시가 필요한 경우 (duration이 0이면 수동으로 닫아야 함)
+    if (duration > 0) {
+      toastTimeoutRef.current = setTimeout(() => {
+        setToastMessage("");
+        setToastType("success");
+      }, duration);
+    }
+  };
+
+  const hideToast = () => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToastMessage("");
+    setToastType("success");
   };
 
   const handleSendMessage = async () => {
@@ -137,7 +213,7 @@ function ChatbotPage() {
     }
   };
 
-  // TTS 기능 구현 - 실제 음성 출력
+  // TTS 기능 구현 - 개선된 버전
   const handleSpeakMessage = async (content) => {
     if (isSpeaking) {
       showToast("이미 음성 출력 중입니다.", "warning");
@@ -161,12 +237,15 @@ function ChatbotPage() {
       await speak(cleanContent);
 
       console.log("🎵 TTS 완료");
-      showToast("음성 출력이 완료되었습니다!");
+      // TTS 정상 완료 시에는 토스트를 바로 완료 메시지로 변경하지 않음
+      // useEffect에서 isSpeaking 상태 변화를 감지하여 처리함
     } catch (error) {
       console.error("TTS 오류:", error);
       showToast("음성 출력에 실패했습니다.", "error");
     } finally {
+      // TTS 완료 또는 오류 시 상태 초기화
       setIsSpeaking(false);
+      console.log("🔄 TTS 상태 초기화 완료");
     }
   };
 
@@ -175,7 +254,7 @@ function ChatbotPage() {
     if (isRecording) {
       try {
         await stopRecording();
-        showToast("음성 인식을 중지했습니다.");
+        // STT 중지 토스트는 useEffect에서 처리됨
       } catch (error) {
         console.error("STT 중지 오류:", error);
         showToast("음성 인식 중지에 실패했습니다.", "error");
@@ -183,7 +262,7 @@ function ChatbotPage() {
     } else {
       try {
         await startRecording();
-        showToast("음성 인식을 시작합니다. 말씀해 주세요!", "info");
+        // STT 시작 토스트는 useEffect에서 처리됨
       } catch (error) {
         console.error("STT 시작 오류:", error);
         showToast("마이크 접근 권한이 필요합니다.", "error");
@@ -214,23 +293,20 @@ function ChatbotPage() {
     showToast("대화가 초기화되었습니다.");
   };
 
-  const suggestedQuestions = [
-    "세종대왕이 가장 좋아한 음식은 무엇인가요?",
-    "조선시대 궁중의 하루 일과는 어떠했나요?",
-    "임진왜란 당시 의병 활동은 어떠했나요?",
-    "영조의 균역법 개혁 배경을 알려주세요",
-    "정조의 수원화성 건설 이유는 무엇인가요?",
-  ];
+  const suggestedQuestions = ["세종대왕이 가장 좋아한 음식은 무엇인가요?", "조선시대 궁중의 하루 일과는 어떠했나요?", "임진왜란 당시 의병 활동은 어떠했나요?", "영조의 균역법 개혁 배경을 알려주세요", "정조의 수원화성 건설 이유는 무엇인가요?"];
 
   return (
-    <div className="chatbot-page">
+    <div className={`chatbot-page ${chatMode}`}>
       {/* 토스트 메시지 */}
       {toastMessage && (
-        <div
-          className={`toast-message ${
-            toastMessage.includes("오류") || toastMessage.includes("실패") ? "error" : "success"
-          }`}>
+        <div className={`toast-message ${toastType}`}>
           {toastMessage}
+          {/* 지속적 토스트의 경우에만 닫기 버튼 제공 */}
+          {(toastMessage.includes("음성 출력 중") || toastMessage.includes("음성을 인식하고")) && (
+            <button className="toast-close-btn" onClick={hideToast} title="닫기">
+              ×
+            </button>
+          )}
         </div>
       )}
 
@@ -241,14 +317,10 @@ function ChatbotPage() {
         </div>
 
         <div className="chat-modes">
-          <button
-            className={`mode-btn ${chatMode === "verification" ? "active" : ""}`}
-            onClick={() => setChatMode("verification")}>
+          <button className={`mode-btn ${chatMode === "verification" ? "active verification" : ""}`} onClick={() => setChatMode("verification")}>
             📚 고증 검증
           </button>
-          <button
-            className={`mode-btn ${chatMode === "creative" ? "active" : ""}`}
-            onClick={() => setChatMode("creative")}>
+          <button className={`mode-btn ${chatMode === "creative" ? "active creative" : ""}`} onClick={() => setChatMode("creative")}>
             ✨ 창작 도우미
           </button>
         </div>
@@ -268,10 +340,7 @@ function ChatbotPage() {
                 {message.keywords && message.keywords.length > 0 && (
                   <div className="message-keywords">
                     {message.keywords.map((keyword, index) => (
-                      <button
-                        key={index}
-                        className="keyword-btn"
-                        onClick={() => handleKeywordClick(keyword)}>
+                      <button key={index} className="keyword-btn" onClick={() => handleKeywordClick(keyword)}>
                         {keyword}
                       </button>
                     ))}
@@ -287,17 +356,10 @@ function ChatbotPage() {
 
               {message.type === "bot" && (
                 <div className="message-actions">
-                  <button
-                    className={`action-btn ${isSpeaking ? "speaking" : ""}`}
-                    onClick={() => handleSpeakMessage(message.content)}
-                    title="음성으로 듣기"
-                    disabled={isSpeaking}>
+                  <button className={`action-btn ${isSpeaking ? "speaking" : ""}`} onClick={() => handleSpeakMessage(message.content)} title={isSpeaking ? "음성 출력 중... (ESC로 중단)" : "음성으로 듣기"} disabled={false}>
                     <Volume2 size={16} />
                   </button>
-                  <button
-                    className="action-btn"
-                    onClick={() => handleCopyMessage(message.content)}
-                    title="복사하기">
+                  <button className="action-btn" onClick={() => handleCopyMessage(message.content)} title="복사하기">
                     <Copy size={16} />
                   </button>
                 </div>
@@ -326,10 +388,7 @@ function ChatbotPage() {
           <h3>추천 질문</h3>
           <div className="questions-list">
             {suggestedQuestions.map((question, index) => (
-              <button
-                key={index}
-                className="suggestion-btn"
-                onClick={() => setInputMessage(question)}>
+              <button key={index} className="suggestion-btn" onClick={() => setInputMessage(question)}>
                 {question}
               </button>
             ))}
@@ -341,45 +400,17 @@ function ChatbotPage() {
             <button className="action-btn" onClick={handleReset} title="대화 초기화">
               <RotateCcw size={18} />
             </button>
-            <button
-              className={`action-btn ${isRecording ? "recording" : ""}`}
-              onClick={toggleListening}
-              title={isRecording ? "음성 입력 중지" : "음성 입력 시작"}
-              disabled={isLoading}>
+            <button className={`action-btn ${isRecording ? "recording" : ""}`} onClick={toggleListening} title={isRecording ? "음성 입력 중지" : "음성 입력 시작"} disabled={isLoading}>
               {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
           </div>
 
           <div className="input-wrapper">
-            <textarea
-              ref={inputRef}
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={`${
-                chatMode === "verification"
-                  ? "역사적 사실에 대해 질문해보세요..."
-                  : "창작하고 싶은 내용을 말씀해주세요..."
-              }`}
-              rows="1"
-              className="chat-input"
-              disabled={isRecording}
-            />
-            <button
-              className="send-btn"
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading || isRecording}>
+            <textarea ref={inputRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요..." : "창작하고 싶은 내용을 말씀해주세요..."}`} rows="1" className="chat-input" disabled={isRecording} />
+            <button className="send-btn" onClick={handleSendMessage} disabled={!inputMessage.trim() || isLoading || isRecording}>
               <Send size={18} />
             </button>
           </div>
-
-          {/* 음성 인식 상태 표시 */}
-          {isRecording && (
-            <div className="recording-indicator">
-              <div className="recording-animation"></div>
-              <span>음성을 인식하고 있습니다...</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
