@@ -6,6 +6,32 @@
   align-items: center;
   justify-content: center;
   padding: 0 20px;
+
+  /* 배경 이미지 & 오버레이 적용 */
+  position: relative; /* 오버레이 절대 위치를 위한 기준 */
+  background: url('/img/history-bg_4.jpg') center center / cover no-repeat;
+  color: var(--text-primary); /* 기본 텍스트 컬러 유지 */
+}
+
+
+/* 어두운 반투명 오버레이를 위한 ::before */
+.home-page::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: url('/img/history-bg_4.jpg') center center / cover no-repeat;
+  filter: blur(2px) brightness(0.7); /* 블러+살짝 어둡게 */
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 컨텐츠가 오버레이 위에 올라오게 설정 */
+.home-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
 }
 
 .home-content {
@@ -20,7 +46,7 @@
 
 .logo-main {
   font-size: 72px;
-  font-weight: 300;
+  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 20px;
   letter-spacing: 2px;
@@ -29,9 +55,10 @@
 }
 
 .logo-subtitle {
-  font-size: 16px;
-  color: var(--text-secondary);
-  font-weight: 300;
+  font-size: 20px;
+  color: #111;
+  /* color: var(--text-secondary); */
+  font-weight: 500;
   margin-bottom: 0;
 }
 
@@ -128,26 +155,28 @@
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 20px;
+  color: #000;
   background: none;
 }
 
 .quick-feature:hover {
-  border-color: var(--border-secondary);
-  background: var(--bg-secondary);
+  border-color: none;
+  background: none; 
   transform: translateY(-2px);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25); /* 텍스트에 그림자 추가 */
 }
 
 .popular-searches {
   margin-top: 20px;
+  
 }
 
 .popular-searches h3 {
-  font-size: 16px;
-  color: var(--text-secondary);
+  font-size: 22px;
+  color: #212121;
   margin-bottom: 15px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .search-tags {
@@ -159,20 +188,23 @@
 
 .search-tag {
   padding: 6px 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
-  border-radius: 16px;
+  /* background: #fff; */
+  border: none;
+  border-radius: 18px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 20px;
   color: var(--text-primary);
+  box-shadow: none; /* 기본상태: 그림자 없음 */
   transition: all 0.3s ease;
 }
 
 .search-tag:hover {
-  background: var(--bg-tertiary);
+  /* background: var(--bg-tertiary); */
   border-color: var(--accent-primary);
   color: var(--accent-primary);
   transform: translateY(-1px);
+  /* box-shadow에 Y, blur, 투명도 등을 조절 */
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1.5px 6px rgba(0,0,0,0.09);
 }
 
 /* Mobile Responsive */
