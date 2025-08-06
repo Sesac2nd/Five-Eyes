@@ -17,7 +17,8 @@ function SearchResultsPage() {
             id: 1,
             url: "sillok.history.go.kr › 세종실록",
             title: "세종실록 권12 - 내시부 제도 개편",
-            snippet: "세종 3년(1421) 5월 15일. 내시부(內侍府)의 제도를 개편하여 내시의 정원을 30명으로 정하고...",
+            snippet:
+              "세종 3년(1421) 5월 15일. 내시부(內侍府)의 제도를 개편하여 내시의 정원을 30명으로 정하고...",
             reliability: 95,
             date: "1421.05.15",
             king: "세종",

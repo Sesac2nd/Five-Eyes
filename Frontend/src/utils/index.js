@@ -38,7 +38,9 @@ export const getNavigationItems = (navigation) => {
  * @param {string} title - 페이지 제목
  */
 export const setPageTitle = (title) => {
-  document.title = title ? `${title} - 역사로` : "역사로(HistPath) - AI 기반 한국사 고증 검색 플랫폼";
+  document.title = title
+    ? `${title} - 역사로`
+    : "역사로(HistPath) - AI 기반 한국사 고증 검색 플랫폼";
 };
 
 /**

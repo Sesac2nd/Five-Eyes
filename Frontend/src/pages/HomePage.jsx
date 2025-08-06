@@ -20,7 +20,13 @@ function HomePage() {
   };
 
   const handleRandomSearch = () => {
-    const randomQueries = ["세종대왕이 가장 좋아한 음식은?", "조선시대 궁중의 하루 일과는?", "임진왜란 당시 의병 활동은?", "영조의 균역법 개혁 배경은?", "정조의 수원화성 건설 이유는?"];
+    const randomQueries = [
+      "세종대왕이 가장 좋아한 음식은?",
+      "조선시대 궁중의 하루 일과는?",
+      "임진왜란 당시 의병 활동은?",
+      "영조의 균역법 개혁 배경은?",
+      "정조의 수원화성 건설 이유는?",
+    ];
     const randomQuery = randomQueries[Math.floor(Math.random() * randomQueries.length)];
     setSearchQuery(randomQuery);
     navigate(`/search?q=${encodeURIComponent(randomQuery)}`);
@@ -36,7 +42,14 @@ function HomePage() {
 
         <div className="search-section">
           <div className="search-container">
-            <input type="text" className="search-box" placeholder="예: 세종 시대 내시 제도는 어떻게 운영되었나요?" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyPress={handleKeyPress} />
+            <input
+              type="text"
+              className="search-box"
+              placeholder="예: 세종 시대 내시 제도는 어떻게 운영되었나요?"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
+            />
             <button className="voice-icon" aria-label="음성 검색">
               <Mic size={16} />
             </button>
@@ -66,12 +79,14 @@ function HomePage() {
           </button>
           <button className="quick-feature">
             <TrendingUp size={16} />
-            <span>인기 검색어</span>
+            <span> 인기 검색어</span>
           </button>
         </div>
 
         <div className="popular-searches">
-          <h3>인기 검색어</h3>
+          <h3>
+            <Search size={18} /> 인기 검색어 Top5
+          </h3>
           <div className="search-tags">
             <button className="search-tag" onClick={() => setSearchQuery("세종대왕 한글 창제")}>
               세종대왕 한글 창제

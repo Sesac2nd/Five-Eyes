@@ -7,7 +7,8 @@ function ChatbotPage() {
     {
       id: 1,
       type: "bot",
-      content: "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요.",
+      content:
+        "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요.",
       timestamp: new Date(),
       keywords: ["조선왕조실록", "역사", "AI"],
     },
@@ -16,6 +17,7 @@ function ChatbotPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -40,8 +42,8 @@ function ChatbotPage() {
     setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
     setIsLoading(true);
+    setShowSuggestions(false); // 추천 질문 패널 숨기기
 
-    // 시뮬레이션을 위한 지연
     setTimeout(() => {
       const botResponse = generateBotResponse(inputMessage);
       setMessages((prev) => [...prev, botResponse]);
@@ -61,8 +63,8 @@ function ChatbotPage() {
 
 **출처**: 조선왕조실록 > 세종실록 > 세종 3년 5월 15일
 **신뢰도**: 95%
-**관련 키워드**: 내시부, 궁중제도, 세종대왕`,
-        keywords: ["내시부", "궁중제도", "세종대왕", "조선왕조실록", "세종실록"],
+**관련 키워드**: 내시부, 고증, 실록`,
+        keywords: ["내시부", "고증", "실록"],
         sources: ["세종실록 12권", "경국대전"],
       },
       creative: {
@@ -79,7 +81,7 @@ function ChatbotPage() {
 - 개인의 성장과 역사적 사명감
 
 **추천 참고 사료**: 세종실록, 경국대전, 승정원일기`,
-        keywords: ["창작", "시놉시스", "갈등구조", "캐릭터", "세종시대"],
+        keywords: ["창작", "스토리", "아이디어"],
         sources: ["세종실록", "승정원일기"],
       },
     };
@@ -109,17 +111,14 @@ function ChatbotPage() {
 
   const toggleListening = () => {
     setIsListening(!isListening);
-    // 실제 구현시 Web Speech API 사용
   };
 
   const handleSpeakMessage = (content) => {
-    // 실제 구현시 Speech Synthesis API 사용
     console.log("Speaking:", content);
   };
 
   const handleCopyMessage = (content) => {
     navigator.clipboard.writeText(content);
-    // 토스트 메시지 표시 가능
   };
 
   const handleReset = () => {
@@ -127,28 +126,46 @@ function ChatbotPage() {
       {
         id: 1,
         type: "bot",
-        content: "대화가 초기화되었습니다. 새로운 질문을 해주세요!",
+        content:
+          chatMode === "verification"
+            ? "안녕하세요! 저는 조선왕조실록 기반 역사 AI입니다. 조선시대에 대한 궁금한 점을 물어보세요."
+            : "안녕하세요! 저는 조선왕조실록 기반 창작 지원 AI입니다. 창작하고 싶은 이야기를 말씀해 주세요.",
         timestamp: new Date(),
         keywords: [],
       },
     ]);
+    setShowSuggestions(true); // 리셋 시 추천 질문 다시 보이도록 설정
   };
 
-  const suggestedQuestions = ["세종대왕이 가장 좋아한 음식은 무엇인가요?", "조선시대 궁중의 하루 일과는 어떠했나요?", "임진왜란 당시 의병 활동은 어떠했나요?", "영조의 균역법 개혁 배경을 알려주세요", "정조의 수원화성 건설 이유는 무엇인가요?"];
+  const suggestedQuestions = [
+    "세종대왕이 가장 좋아한 음식은 무엇인가요?",
+    "조선시대 궁중의 하루 일과는 어떠했나요?",
+    "임진왜란 당시 의병 활동은 어떠했나요?",
+    "영조의 균역법 개혁 배경을 알려주세요",
+    "정조의 수원화성 건설 이유는 무엇인가요?",
+  ];
 
   return (
-    <div className="chatbot-page">
-      <div className="chat-header">
+    <div className={`chatbot-page ${chatMode}`}>
+      <div className={`chat-header ${chatMode}`}>
         <div className="chat-title">
           <h1>역사 AI 챗봇</h1>
-          <p>조선왕조실록 기반 질의응답 및 창작 지원</p>
+          <p>
+            {chatMode === "verification"
+              ? "조선왕조실록 기반 고증 검증 기능을 제공합니다."
+              : "조선왕조실록 기반 창작 지원 기능을 제공합니다."}
+          </p>
         </div>
 
         <div className="chat-modes">
-          <button className={`mode-btn ${chatMode === "verification" ? "active" : ""}`} onClick={() => setChatMode("verification")}>
+          <button
+            className={`mode-btn ${chatMode === "verification" ? "active verification" : ""}`}
+            onClick={() => setChatMode("verification")}>
             📚 고증 검증
           </button>
-          <button className={`mode-btn ${chatMode === "creative" ? "active" : ""}`} onClick={() => setChatMode("creative")}>
+          <button
+            className={`mode-btn ${chatMode === "creative" ? "active creative" : ""}`}
+            onClick={() => setChatMode("creative")}>
             ✨ 창작 도우미
           </button>
         </div>
@@ -168,7 +185,10 @@ function ChatbotPage() {
                 {message.keywords && message.keywords.length > 0 && (
                   <div className="message-keywords">
                     {message.keywords.map((keyword, index) => (
-                      <button key={index} className="keyword-btn" onClick={() => handleKeywordClick(keyword)}>
+                      <button
+                        key={index}
+                        className="keyword-btn"
+                        onClick={() => handleKeywordClick(keyword)}>
                         {keyword}
                       </button>
                     ))}
@@ -184,10 +204,16 @@ function ChatbotPage() {
 
               {message.type === "bot" && (
                 <div className="message-actions">
-                  <button className="action-btn" onClick={() => handleSpeakMessage(message.content)} title="음성으로 듣기">
+                  <button
+                    className="action-btn"
+                    onClick={() => handleSpeakMessage(message.content)}
+                    title="음성으로 듣기">
                     <Volume2 size={16} />
                   </button>
-                  <button className="action-btn" onClick={() => handleCopyMessage(message.content)} title="복사하기">
+                  <button
+                    className="action-btn"
+                    onClick={() => handleCopyMessage(message.content)}
+                    title="복사하기">
                     <Copy size={16} />
                   </button>
                 </div>
@@ -212,30 +238,56 @@ function ChatbotPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="suggested-questions">
-          <h3>추천 질문</h3>
-          <div className="questions-list">
-            {suggestedQuestions.map((question, index) => (
-              <button key={index} className="suggestion-btn" onClick={() => setInputMessage(question)}>
-                {question}
-              </button>
-            ))}
+        {showSuggestions && (
+          <div className="suggested-questions">
+            <h3>추천 질문</h3>
+            <div className="questions-list">
+              {suggestedQuestions.map((question, index) => (
+                <button
+                  key={index}
+                  className="suggestion-btn"
+                  onClick={() => {
+                    setInputMessage(question);
+                    setShowSuggestions(false);
+                  }}>
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="chat-input-container">
           <div className="input-actions">
             <button className="action-btn" onClick={handleReset} title="대화 초기화">
               <RotateCcw size={18} />
             </button>
-            <button className={`action-btn ${isListening ? "active" : ""}`} onClick={toggleListening} title="음성 입력">
+            <button
+              className={`action-btn ${isListening ? "active" : ""}`}
+              onClick={toggleListening}
+              title="음성 입력">
               {isListening ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
           </div>
 
           <div className="input-wrapper">
-            <textarea ref={inputRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요..." : "창작하고 싶은 내용을 말씀해주세요..."}`} rows="1" className="chat-input" />
-            <button className="send-btn" onClick={handleSendMessage} disabled={!inputMessage.trim() || isLoading}>
+            <textarea
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={`${
+                chatMode === "verification"
+                  ? "역사적 사실에 대해 질문해보세요..."
+                  : "창작하고 싶은 내용을 말씀해주세요..."
+              }`}
+              rows="1"
+              className="chat-input"
+            />
+            <button
+              className="send-btn"
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}>
               <Send size={18} />
             </button>
           </div>
