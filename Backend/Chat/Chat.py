@@ -270,8 +270,11 @@ def get_text_completion_result(
     try:
         # 1. 관련 문서 검색
         doc_search_keywords = extract_keyword_from_query(user_query, OAI_client, keyword_model)
-        relevant_docs = get_relevant_documents(" ".join(doc_search_keywords), search_client)
-        
+        relevant_docs = get_relevant_documents(user_query, search_client, top_k=3 if is_verify else 5)
+
+        if not relevant_docs:
+            relevant_docs = get_relevant_documents(" ".join(doc_search_keywords), search_client)
+
         # 2. 컨텍스트 구성
         context_text = ""
         if relevant_docs:
@@ -280,8 +283,17 @@ def get_text_completion_result(
                 for doc in relevant_docs[:3]
             ])
         
-        # 3. 시스템 프롬프트 설정 - SHOULD IMPLEMENT
-        system_prompt = "당신은 역사 전문가입니다. 사용자의 입력과 고증 혹은 창작 여부에 따라 입력에 대한 고증을 진행하거나 사실 기반 사건/인물들을 이용하여 창의적인 내용을 생성해야 합니다."
+        # 3. 시스템 프롬프트 설정
+        if is_verify:
+            system_prompt = """당신은 역사 전문가입니다. 다음 규칙을 엄격히 준수하세요:
+                1. 제공된 문서에 명시된 내용만을 기반으로 답변하세요
+                2. 문서에 없는 정보는 절대 추측하거나 생성하지 마세요
+                3. 확실하지 않은 내용은 "제공된 자료에서는 해당 정보를 찾을 수 없습니다"라고 명시하세요
+                4. 모든 답변에 구체적인 출처를 포함하세요
+                5. 문서 범위를 벗어나는 질문에는 "관련 자료가 부족합니다"라고 답변하세요
+            """
+        else:
+            system_prompt = "당신은 역사 전문가입니다. 제공된 자료를 기반으로 하되, 창작을 위한 상상력을 발휘하여 답변하세요."
         
         # 4. 사용자 프롬프트 구성
         user_prompt = f"""
@@ -290,12 +302,30 @@ def get_text_completion_result(
 
             사용자 질문: {user_query}
 
-            위 자료를 바탕으로 질문에 답변해주세요.
         """
-        
+        if is_verify:
+            user_prompt += """
+            규칙:
+            - 위 자료에 명시된 내용만 사용하여 답변하세요
+            - 자료에 없는 내용은 "자료에서 찾을 수 없음"이라고 명시하세요
+            - 추측이나 일반적 지식 사용 금지
+            - 답변 마지막에 참조한 출처를 명시하세요
+        """
+        else:
+            user_prompt += """
+            위 자료를 기반으로 창작적인 답변을 생성해주세요.
+        """
         # 5. 모드에 따른 파라미터 설정
-        temperature = 0.3 if is_verify else 0.7
-        max_tokens = 1000 if is_verify else 1200
+        if is_verify:
+            temperature = 0.1        # 매우 낮은 창의성
+            max_tokens = 800        # 간결한 답변 강제
+            top_p = 0.2            # 보수적 토큰 선택
+            presence_penalty = 0.8  # 문서 범위 벗어나기 억제
+        else:
+            temperature = 0.7
+            max_tokens = 1200
+            top_p = 0.9
+            presence_penalty = 0.2
         
         # 6. OpenAI API 호출
         response = OAI_client.chat.completions.create(
@@ -305,7 +335,9 @@ def get_text_completion_result(
                 {"role": "user", "content": user_prompt}
             ],
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            top_p=top_p,
+            presence_penalty=presence_penalty
         )
         
         OAI_response = response.choices[0].message.content
