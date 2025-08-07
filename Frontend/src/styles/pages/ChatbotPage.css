@@ -275,7 +275,7 @@
 /* Chat Input */
 .chat-input-container {
   display: flex;
-  align-items: flex-end;
+  align-items: center; /* (수직으로) 위에 맞추기 */
   gap: 12px;
   padding: 20px;
   background: var(--card-bg);
@@ -290,8 +290,8 @@
 }
 
 .input-actions .action-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -322,12 +322,13 @@
 .input-wrapper {
   flex: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;       /* flex-start → center */
   gap: 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
   border-radius: 20px;
-  padding: 8px 12px;
+  padding: 5px 12px;
+  height: auto;
 }
 
 .chat-input {
@@ -341,6 +342,9 @@
   max-height: 120px;
   overflow-y: auto;
   color: var(--text-primary);
+  height: 100%;
+  line-height: 48px;           /* .input-wrapper 높이와 동일하게 지정 */
+  padding: 0;                  /* 필요시 맞춰 조정 */
 }
 
 .chat-input::placeholder {
@@ -350,6 +354,7 @@
 .send-btn {
   width: 36px;
   height: 36px;
+  align-self: center;      /* flex 중앙에 오도록 */
   background: var(--accent-primary);
   border: none;
   border-radius: 50%;

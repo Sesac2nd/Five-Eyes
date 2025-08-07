@@ -5,6 +5,7 @@ import "@/styles/pages/HomePage.css";
 
 function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPopular, setShowPopular] = useState(false);
   const navigate = useNavigate();
 
   const handleSearch = () => {
@@ -77,34 +78,36 @@ function HomePage() {
             <Mic size={16} />
             <span>음성 검색</span>
           </button>
-          <button className="quick-feature">
+          <button
+            className="quick-feature"
+            onClick={() => setShowPopular((prev) => !prev)}
+          >
             <TrendingUp size={16} />
             <span> 인기 검색어</span>
           </button>
         </div>
 
-        <div className="popular-searches">
-          <h3>
-            <Search size={18} /> 인기 검색어 Top5
-          </h3>
-          <div className="search-tags">
-            <button className="search-tag" onClick={() => setSearchQuery("세종대왕 한글 창제")}>
-              세종대왕 한글 창제
-            </button>
-            <button className="search-tag" onClick={() => setSearchQuery("조선시대 과거제도")}>
-              조선시대 과거제도
-            </button>
-            <button className="search-tag" onClick={() => setSearchQuery("임진왜란 이순신")}>
-              임진왜란 이순신
-            </button>
-            <button className="search-tag" onClick={() => setSearchQuery("영조 탕평책")}>
-              영조 탕평책
-            </button>
-            <button className="search-tag" onClick={() => setSearchQuery("정조 규장각")}>
-              정조 규장각
-            </button>
+        {showPopular && (
+          <div className="popular-searches">
+            <h3>
+              <Search size={16} /> 인기 검색어
+            </h3>
+            <div className="search-tags">
+              <button className="search-tag" onClick={() => setSearchQuery("세종대왕 한글 창제")}>
+                세종대왕 한글 창제
+              </button>
+              <button className="search-tag" onClick={() => setSearchQuery("조선시대 과거제도")}>
+                조선시대 과거제도
+              </button>
+              <button className="search-tag" onClick={() => setSearchQuery("임진왜란 이순신")}>
+                임진왜란 이순신
+              </button>
+              <button className="search-tag" onClick={() => setSearchQuery("영조 탕평책")}>
+                영조 탕평책
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
