@@ -385,7 +385,7 @@ function OcrPage() {
                 </div>
               ) : (
                 <div className="upload-placeholder">
-                  <FileImage size={48} />
+                  <FileImage size={35} />
                   <p>이미지를 드래그하거나 클릭하여 업로드하세요.</p>
                   <p className="upload-hint">지원 형식: JPG, PNG, GIF (최대 10MB)</p>
                 </div>

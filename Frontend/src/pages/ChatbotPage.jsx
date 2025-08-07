@@ -35,9 +35,16 @@ function ChatbotPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const prevMessagesRef = useRef([]);
+
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+      // messages 길이가 더 길어졌을 때만(새 메시지 추가) 자동 스크롤
+    if (prevMessagesRef.current.length < messages.length) {
+      scrollToBottom();
+    }
+    prevMessagesRef.current = messages;
+}, [messages]);
+
 
   // STT 결과가 있을 때 input에 반영
   useEffect(() => {

@@ -280,6 +280,7 @@
   padding: 20px;
   background: var(--card-bg);
   border-top: 1px solid var(--border-primary);
+  position: relative;
 }
 
 .input-actions {
