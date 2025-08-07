@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useDarkMode } from "@/contexts/DarkModeContext";
 import "@/styles/components/Sidebar.css";
+import Icon from '@/assets/icons/icon.svg';
 
 function Sidebar({ isOpen, onClose }) {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -45,7 +46,8 @@ function Sidebar({ isOpen, onClose }) {
       <div className="sidebar-header">
         <div className="sidebar-title">
           {" "}
-          <BookMarked size={15} /> 역사로 歷史路
+          <img src={Icon} alt="아이콘" className="sidebar-icon"/> 
+          <span className="sidebar-title-text">역사로 歷史路</span>
         </div>
         <div className="sidebar-subtitle">AI 기반 한국사 고증 검색 플랫폼</div>
       </div>
