@@ -1,6 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Node.js, GitHub Actions, and Azure App Service: https://aka.ms/nodejs-webapps-actions
+# 방법 1: Publish Profile 사용 (수정된 버전)
 
 name: Build and deploy Node.js app to Azure Web App - histpath-frontend
 
@@ -19,7 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # 🔧 Node.js 20 LTS 설정
       - name: Set up Node.js version
         uses: actions/setup-node@v4
         with:
@@ -27,37 +24,21 @@ jobs:
           cache: 'npm'
           cache-dependency-path: Frontend/package-lock.json
       
-      # 🔧 Frontend 디렉토리에서 의존성 설치
       - name: Install dependencies
         working-directory: ./Frontend
         run: |
           npm ci
           echo "Dependencies installed successfully"
       
-      # 🔧 환경변수 설정 후 빌드
       - name: Build application
         working-directory: ./Frontend
         env:
-          # 프로덕션 환경변수 설정
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_APP_ENV: production
         run: |
           npm run build
           echo "Build completed successfully"
       
-      # 🔧 빌드 결과물 확인
-      - name: Verify build output
-        working-directory: ./Frontend
-        run: |
-          ls -la dist/
-          echo "Build verification completed"
-      
-      # Optional: Run tests
-      # - name: Run tests
-      #   working-directory: ./Frontend
-      #   run: npm run test
-      
-      # 🔧 빌드된 dist 폴더와 필요한 설정 파일들만 업로드
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
@@ -65,11 +46,6 @@ jobs:
           path: |
             Frontend/dist/
             Frontend/package.json
-            Frontend/package-lock.json
-            !Frontend/node_modules/
-            !Frontend/src/
-            !Frontend/public/
-            !Frontend/.env*
 
   deploy:
     runs-on: ubuntu-latest
@@ -84,11 +60,12 @@ jobs:
         with:
           name: node-app
       
-      # 🔧 Azure Web App에 배포
+      # 🔧 핵심: package 경로를 명시적으로 지정
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'histpath-frontend'  # 🔧 실제 App Service 이름으로 변경 필요
+          app-name: 'histpath-frontend'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FRONTEND }}  # 🔧 새로운 시크릿 필요
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FRONTEND }}
+          package: './dist'  # 🔧 핵심 수정: 빌드 결과물 경로 명시
