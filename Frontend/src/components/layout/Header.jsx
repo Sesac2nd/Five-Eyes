@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { Menu, HelpCircle } from "lucide-react";
 import "@/styles/components/Header.css";
+import Icon from '@/assets/icons/icon.svg';
+
 
 function Header({ toggleSidebar }) {
   return (
@@ -10,7 +12,7 @@ function Header({ toggleSidebar }) {
       </button>
 
       <Link to="/" className="logo">
-        역사로
+         <img src={Icon} alt="아이콘" className="header-icon"/> 
       </Link>
 
       <div className="header-actions">
