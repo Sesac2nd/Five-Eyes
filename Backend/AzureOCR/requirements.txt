@@ -1,0 +1,43 @@
+# 기본 패키지 (Python 3.13 호환)
+wheel>=0.42.0
+setuptools>=69.0.0
+
+# 웹 프레임워크
+fastapi==0.110.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+
+# Azure Document Intelligence (최신 안정 버전)
+azure-core==1.30.2
+azure-identity==1.16.0
+azure-ai-formrecognizer==3.3.3
+
+# 데이터 처리 (Python 3.13 호환)
+numpy==1.26.4
+Pillow==10.3.0
+matplotlib==3.8.4
+requests==2.32.3
+
+# Flask 지원 (선택사항)
+flask==3.0.3
+flask-cors==4.0.2
+werkzeug==3.0.3
+
+for page_idx, page in enumerate(result.pages):
+    page_data = {
+        "pageNumber": page_idx + 1,
+        "words": []
+    }
+    # 페이지의 모든 단어 처리
+    for word in page.words:
+        word_data = {
+            "content": word.content,
+            "confidence": word.confidence,
+            "polygon": [
+                coord for point in word.polygon
+                for coord in [point.x, point.y]
+            ]
+        }
+        page_data["words"].append(word_data)
+    ocr_result["analyzeResult"]["pages"].append(page_data)
