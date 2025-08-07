@@ -65,7 +65,8 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'histpath-frontend'
+          app-name: 'korhis5team'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FRONTEND }}
           package: './dist'  # 🔧 핵심 수정: 빌드 결과물 경로 명시
+
