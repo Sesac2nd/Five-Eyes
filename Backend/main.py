@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.database import create_tables
 from api import speech, chat
+from config.azure_clients import azure_manager
 
 # 데이터베이스 테이블 생성
 create_tables()
@@ -18,6 +19,17 @@ app = FastAPI(
     description="조선왕조실록 기반 TTS/STT 및 채팅 서비스",
     version="1.0.0",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """앱 시작 시 Azure 클라이언트 상태 확인"""
+    try:
+        # 클라이언트 연결 테스트
+        chat_client = azure_manager.chat_client
+        search_client = azure_manager.search_client
+        print("✅ Azure 클라이언트 연결 확인 완료")
+    except Exception as e:
+        print(f"❌ Azure 클라이언트 연결 실패: {e}")
 
 # CORS 설정
 app.add_middleware(
