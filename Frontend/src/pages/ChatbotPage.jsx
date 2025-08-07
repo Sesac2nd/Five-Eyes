@@ -36,14 +36,20 @@ function ChatbotPage() {
   };
 
   const prevMessagesRef = useRef([]);
+  const isInitialLoadRef = useRef(true); // 초기 로드 여부 판단용
 
   useEffect(() => {
+    if (isInitialLoadRef.current) {
       // messages 길이가 더 길어졌을 때만(새 메시지 추가) 자동 스크롤
-    if (prevMessagesRef.current.length < messages.length) {
-      scrollToBottom();
+      isInitialLoadRef.current = false;
+    } else {
+      // 이후 새 메시지 추가 시에만 스크롤 이동
+      if (prevMessagesRef.current.length < messages.length) {
+        scrollToBottom();
+      }
     }
     prevMessagesRef.current = messages;
-}, [messages]);
+  }, [messages]);
 
 
   // STT 결과가 있을 때 input에 반영

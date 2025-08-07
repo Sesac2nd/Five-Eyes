@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Mic, Camera, BarChart3, TrendingUp } from "lucide-react";
 import "@/styles/pages/HomePage.css";
+// import 방식 (바벨/웹팩 환경)
+import Icon from '@/assets/icons/icon.svg';
 
 function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
