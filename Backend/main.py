@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.database import create_tables
-from api import speech, chat  # OCR import 주석처리
+from api import speech, chat, ocr
+from config.azure_clients import azure_manager
 
-# from api import speech, chat, ocr
 
 # 데이터베이스 테이블 생성
 create_tables()
@@ -30,6 +30,17 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """앱 시작 시 Azure 클라이언트 상태 확인"""
+    try:
+        # 클라이언트 연결 테스트
+        chat_client = azure_manager.chat_client
+        search_client = azure_manager.search_client
+        print("✅ Azure 클라이언트 연결 확인 완료")
+    except Exception as e:
+        print(f"❌ Azure 클라이언트 연결 실패: {e}")
 
 # CORS 설정
 app.add_middleware(
@@ -49,8 +60,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(speech.router, prefix="/api", tags=["speech"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
-# OCR 라우터 주석처리
-# app.include_router(ocr.router, prefix="/api", tags=["ocr"])
+app.include_router(ocr.router, prefix="/api", tags=["ocr"])
 
 
 @app.get("/")
@@ -58,14 +68,14 @@ async def root():
     return {
         "message": "역사검증 도우미 API 서버",
         "version": "1.0.0",
-        "services": ["TTS/STT", "Chat"],  # OCR 제거
+        "services": ["TTS/STT", "Chat", "OCR"],
         "endpoints": {
             "tts": "/api/tts",
             "stt": "/api/stt",
             "chat": "/api/chat",
-            # OCR 엔드포인트 주석처리
-            # "ocr": "/api/ocr",
-            # "ocr_status": "/api/ocr/status",
+            "ocr": "/api/ocr",
+            "ocr_status": "/api/ocr/status",
+
             "docs": "/docs",
             "redoc": "/redoc",
         },

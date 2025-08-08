@@ -3,7 +3,7 @@ import base64
 import azure.cognitiveservices.speech as speechsdk
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
-from models.chat import SpeechLog
+from models.chat_model import SpeechLog
 
 load_dotenv()
 

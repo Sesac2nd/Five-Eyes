@@ -1,235 +1,241 @@
-# api/ocr.py
+import os
 import uuid
-import time
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
-from sqlalchemy.orm import Session
-from typing import Optional
-import logging
-
+import tempfile
+from dotenv import load_dotenv
 from config.database import get_db
-from models.ocr import OCRLog, OCRRequest, OCRResult, OCRResponse, OCRModelType
-from services.paddle_ocr_service import paddle_ocr_service
-from services.azure_ocr_service import azure_ocr_service
-from utils.image_processing import preprocess_image_for_ocr
 
-logger = logging.getLogger(__name__)
+from models.ocr_model import OCRAnalysis
+from services.ocr_service import analyze_document
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi.responses import FileResponse
+
+from pydantic import BaseModel
+from typing import List, Dict, Union, Any
+from sqlalchemy.orm import Session
+
+load_dotenv()
+IS_DEBUG = os.getenv("IS_DEBUG", "")
+
 router = APIRouter()
 
 
-@router.post("/ocr", response_model=OCRResponse)
-async def process_ocr(
-    file: UploadFile = File(..., description="분석할 이미지 파일"),
-    model_type: str = Form(..., description="OCR 모델 타입 (ppocr 또는 azure)"),
-    session_id: Optional[str] = Form(None, description="세션 ID (선택사항)"),
-    db: Session = Depends(get_db),
+class OCRRequest(BaseModel):
+    engine: str = "paddle"  # "paddle" or "azure"
+    extract_text_only: bool = False
+    visualization: bool = True
+
+
+class OCRResponse(BaseModel):
+    id: int
+    analysis_id: str
+    filename: str
+    engine: str
+    status: str
+    extracted_text: str
+    word_count: int
+    confidence_score: float
+    processing_time: float
+    visualization_path: Union[str, None] = None
+    timestamp: str
+    ocr_data: Union[Dict[str, Any], None] = None
+
+
+@router.post("/ocr/analyze", response_model=OCRResponse)
+async def analyze_ocr(
+    file: UploadFile = File(...),
+    engine: str = Form(default="paddle"),
+    extract_text_only: bool = Form(default=False),
+    visualization: bool = Form(default=True),
+    db: Session = Depends(get_db)
 ):
     """
-    이미지 OCR 처리 API
-
-    - **file**: 업로드할 이미지 파일 (JPG, PNG, GIF 지원)
-    - **model_type**: 사용할 OCR 모델 ("ppocr" 또는 "azure")
-    - **session_id**: 세션 식별자 (선택사항, 없으면 자동 생성)
+    OCR 문서 분석 처리
     """
+    if IS_DEBUG:
+        print(f"=== OCR 분석 요청 ===")
+        print(f"파일명: {file.filename}")
+        print(f"엔진: {engine}")
+        print(f"텍스트만 추출: {extract_text_only}")
+        print(f"시각화: {visualization}")
 
-    # 세션 ID 생성 (없는 경우)
-    if not session_id:
-        session_id = str(uuid.uuid4())
+    # 파일 형식 검증
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="이미지 파일만 지원됩니다.")
 
-    # 모델 타입 검증
-    try:
-        model_enum = OCRModelType(model_type.lower())
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"지원하지 않는 모델 타입입니다. 'ppocr' 또는 'azure'를 사용하세요.",
-        )
-
-    # 파일 타입 검증
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
-
-    start_time = time.time()
-    ocr_log = None
+    # 분석 ID 생성
+    analysis_id = str(uuid.uuid4())
 
     try:
-        # 이미지 데이터 읽기
-        logger.info(f"📁 파일 업로드: {file.filename} ({file.content_type})")
-        image_data = await file.read()
-        file_size = len(image_data)
+        # 업로드된 파일 임시 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
 
-        # 파일 크기 검증 (최대 10MB)
-        if file_size > 10 * 1024 * 1024:
-            raise HTTPException(
-                status_code=413,
-                detail="파일 크기가 너무 큽니다. 최대 10MB까지 지원합니다.",
-            )
-
-        # OCR 로그 초기 생성
-        ocr_log = OCRLog(
-            session_id=session_id,
-            model_type=model_enum.value,
-            original_filename=file.filename,
-            file_size=file_size,
-            success=False,
+        # OCR 분석 실행
+        analysis_result = analyze_document(
+            file_path=temp_file_path,
+            engine=engine,
+            extract_text_only=extract_text_only,
+            visualization=visualization
         )
-        db.add(ocr_log)
-        db.flush()  # ID 생성을 위해
 
-        # 이미지 전처리
-        logger.info(f"🔄 이미지 전처리 시작 (모델: {model_enum.value})")
-        try:
-            processed_image_data = preprocess_image_for_ocr(
-                image_data, model_enum.value
-            )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        except Exception as e:
-            logger.error(f"이미지 전처리 실패: {e}")
-            processed_image_data = image_data  # 원본 사용
+        # 임시 파일 정리
+        os.unlink(temp_file_path)
 
-        # 선택된 모델로 OCR 처리
-        logger.info(f"🤖 OCR 처리 시작 (모델: {model_enum.value})")
+        if IS_DEBUG:
+            print(f"분석 결과: {analysis_result.status}")
+            print(f"추출된 텍스트 길이: {len(analysis_result.extracted_text)}")
+            print(f"신뢰도 점수: {analysis_result.confidence_score}")
 
-        if model_enum == OCRModelType.PPOCR:
-            if not paddle_ocr_service.is_available():
-                raise HTTPException(
-                    status_code=503,
-                    detail="PaddleOCR 서비스가 현재 사용할 수 없습니다. 서버 관리자에게 문의하세요.",
-                )
-            ocr_result_dict = paddle_ocr_service.process_image(processed_image_data)
-
-        elif model_enum == OCRModelType.AZURE:
-            if not azure_ocr_service.is_available():
-                raise HTTPException(
-                    status_code=503,
-                    detail="Azure OCR 서비스가 현재 사용할 수 없습니다. API 키 설정을 확인하세요.",
-                )
-            ocr_result_dict = azure_ocr_service.process_image(processed_image_data)
-
-        else:
-            raise HTTPException(status_code=400, detail="지원하지 않는 모델입니다.")
-
-        # OCR 결과 처리
-        total_processing_time = time.time() - start_time
-
-        if ocr_result_dict["success"]:
-            # 성공적인 결과 처리
-            ocr_result = OCRResult(
-                success=True,
-                model_type=model_enum.value,
-                processing_time=total_processing_time,
-                confidence_avg=ocr_result_dict.get("confidence_avg"),
-                word_count=ocr_result_dict.get("word_count"),
-                lines=ocr_result_dict.get("lines"),
-                full_text=ocr_result_dict.get("full_text"),
-            )
-
-            # 로그 업데이트
-            ocr_log.success = True
-            ocr_log.processing_time = total_processing_time
-            ocr_log.confidence_avg = ocr_result_dict.get("confidence_avg")
-            ocr_log.word_count = ocr_result_dict.get("word_count")
-            ocr_log.result_data = ocr_result_dict
-
-            logger.info(
-                f"✅ OCR 처리 성공: {ocr_result.word_count}개 단어, 평균 신뢰도 {ocr_result.confidence_avg:.3f}"
-            )
-
-        else:
-            # 실패한 결과 처리
-            error_message = ocr_result_dict.get("error", "알 수 없는 오류")
-
-            ocr_result = OCRResult(
-                success=False,
-                model_type=model_enum.value,
-                processing_time=total_processing_time,
-                error_message=error_message,
-            )
-
-            # 로그 업데이트
-            ocr_log.success = False
-            ocr_log.processing_time = total_processing_time
-            ocr_log.error_message = error_message
-
-            logger.error(f"❌ OCR 처리 실패: {error_message}")
-
-        # 데이터베이스 커밋
+        # OCR 분석 기록 저장 (결과와 함께)
+        ocr_analysis = OCRAnalysis(
+            analysis_id=analysis_id,
+            filename=file.filename or "unknown",
+            engine=engine,
+            status=analysis_result.status,
+            extracted_text=analysis_result.extracted_text,
+            word_count=analysis_result.word_count,
+            confidence_score=analysis_result.confidence_score,
+            processing_time=analysis_result.processing_time,
+            extract_text_only=extract_text_only,
+            visualization_requested=visualization,
+            visualization_path=analysis_result.visualization_path,
+            error_message=analysis_result.error_message
+        )
+        db.add(ocr_analysis)
         db.commit()
 
-        # 응답 생성
-        response = OCRResponse(
-            log_id=ocr_log.id, session_id=session_id, result=ocr_result
+        return OCRResponse(
+            id=ocr_analysis.id,
+            analysis_id=analysis_id,
+            filename=file.filename,
+            engine=engine,
+            status=analysis_result.status,
+            extracted_text=analysis_result.extracted_text,
+            word_count=analysis_result.word_count,
+            confidence_score=analysis_result.confidence_score,
+            processing_time=analysis_result.processing_time,
+            visualization_path=analysis_result.visualization_path,
+            timestamp=ocr_analysis.created_at.isoformat(),
+            ocr_data=analysis_result.ocr_data if not extract_text_only else None
         )
-
-        return response
-
-    except HTTPException:
-        # FastAPI HTTPException은 그대로 전파
-        if ocr_log:
-            db.rollback()
-        raise
 
     except Exception as e:
-        # 예상치 못한 오류 처리
-        logger.error(f"❌ OCR API 예외 발생: {e}")
+        print(f"❌ OCR 분석 오류: {e}")
+        # 임시 파일 정리 (에러 시)
+        try:
+            os.unlink(temp_file_path)
+        except:
+            pass
+        
+        # 실패한 분석 기록 저장
+        try:
+            failed_analysis = OCRAnalysis(
+                analysis_id=analysis_id,
+                filename=file.filename or "unknown",
+                engine=engine,
+                status="failed",
+                extracted_text="",
+                word_count=0,
+                confidence_score=0.0,
+                processing_time=0.0,
+                extract_text_only=extract_text_only,
+                visualization_requested=visualization,
+                visualization_path=None,
+                error_message=str(e)
+            )
+            db.add(failed_analysis)
+            db.commit()
+        except:
+            pass
 
-        if ocr_log:
-            ocr_log.success = False
-            ocr_log.processing_time = time.time() - start_time
-            ocr_log.error_message = str(e)
-            try:
-                db.commit()
-            except:
-                db.rollback()
-
-        raise HTTPException(
-            status_code=500, detail=f"서버 내부 오류가 발생했습니다: {str(e)}"
-        )
-
-
-@router.get("/ocr/history/{session_id}")
-async def get_ocr_history(session_id: str, db: Session = Depends(get_db)):
-    """
-    특정 세션의 OCR 처리 기록 조회
-    """
-    try:
-        logs = (
-            db.query(OCRLog)
-            .filter(OCRLog.session_id == session_id)
-            .order_by(OCRLog.created_at.desc())
-            .all()
-        )
-
-        return {
-            "session_id": session_id,
-            "total_count": len(logs),
-            "logs": [log.to_dict() for log in logs],
-        }
-
-    except Exception as e:
-        logger.error(f"OCR 기록 조회 오류: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ocr/status")
-async def get_ocr_status():
+@router.get("/ocr/analysis/history/{analysis_id}")
+async def get_analysis_history(analysis_id: str, db: Session = Depends(get_db)):
     """
-    OCR 서비스 상태 확인
+    OCR 분석 기록 조회
     """
-    return {
-        "paddle_ocr": {
-            "available": paddle_ocr_service.is_available(),
-            "status": (
-                "✅ 사용 가능" if paddle_ocr_service.is_available() else "❌ 사용 불가"
-            ),
-        },
-        "azure_ocr": {
-            "available": azure_ocr_service.is_available(),
-            "status": (
-                "✅ 사용 가능" if azure_ocr_service.is_available() else "❌ 사용 불가"
-            ),
-        },
-        "supported_models": ["ppocr", "azure"],
-        "max_file_size": "10MB",
-        "supported_formats": ["JPG", "PNG", "GIF"],
-    }
+    try:
+        analysis = (
+            db.query(OCRAnalysis)
+            .filter(OCRAnalysis.analysis_id == analysis_id)
+            .first()
+        )
+
+        if not analysis:
+            raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
+
+        return analysis.to_dict()
+
+    except Exception as e:
+        print(f"❌ 분석 기록 조회 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ocr/analysis/list")
+async def get_analysis_list(
+    limit: int = 20,
+    offset: int = 0,
+    engine: Union[str, None] = None,
+    status: Union[str, None] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    OCR 분석 목록 조회
+    """
+    try:
+        query = db.query(OCRAnalysis)
+        
+        if engine:
+            query = query.filter(OCRAnalysis.engine == engine)
+        if status:
+            query = query.filter(OCRAnalysis.status == status)
+
+        analyses = (
+            query.order_by(OCRAnalysis.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        return [analysis.to_dict() for analysis in analyses]
+
+    except Exception as e:
+        print(f"❌ 분석 목록 조회 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ocr/visualization/{analysis_id}")
+async def get_visualization(analysis_id: str, db: Session = Depends(get_db)):
+    """
+    OCR 분석 시각화 파일 조회
+    """
+    try:
+        analysis = (
+            db.query(OCRAnalysis)
+            .filter(OCRAnalysis.analysis_id == analysis_id)
+            .first()
+        )
+
+        if not analysis:
+            raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
+
+        analysis_dict = analysis.to_dict()
+        viz_path = analysis_dict.get('visualization_path')
+        
+        if not viz_path or not os.path.exists(viz_path):
+            raise HTTPException(status_code=404, detail="시각화 파일을 찾을 수 없습니다.")
+
+        return FileResponse(
+            viz_path,
+            media_type="image/png",
+            filename=f"viz_{analysis_id}.png"
+        )
+
+    except Exception as e:
+        print(f"❌ 시각화 파일 조회 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

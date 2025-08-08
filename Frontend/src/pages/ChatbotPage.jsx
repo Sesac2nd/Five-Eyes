@@ -148,72 +148,99 @@ function ChatbotPage() {
     setToastType("success");
   };
 
+    // // 호출하는 곳에서 사용법 (async/await 처리 필요)
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+    if (!inputMessage.trim()) return;
 
+    // 사용자 메시지 추가
     const userMessage = {
       id: Date.now(),
       type: "user",
       content: inputMessage,
       timestamp: new Date(),
     };
-
-    setMessages((prev) => [...prev, userMessage]);
+    
+    setMessages(prev => [...prev, userMessage]);
+    const query = inputMessage;
     setInputMessage("");
-    setIsLoading(true);
 
-    // 시뮬레이션을 위한 지연
-    setTimeout(() => {
-      const botResponse = generateBotResponse(inputMessage);
-      setMessages((prev) => [...prev, botResponse]);
+    try {
+      // 로딩 상태 표시
+      setIsLoading(true);
+      
+      // API 호출 (await 사용)
+      const botResponse = await generateBotResponse(query, chatMode);
+      
+      // 봇 응답 추가
+      setMessages(prev => [...prev, botResponse]);
+      
+    } catch (error) {
+      console.error('메시지 전송 오류:', error);
+      
+      // 에러 메시지 표시
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: "bot",
+        content: "죄송합니다. 메시지 처리 중 오류가 발생했습니다.",
+        timestamp: new Date(),
+        error: true
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const generateBotResponse = (query) => {
-    const responses = {
-      verification: {
-        content: `📚 **조선왕조실록 기반 답변**
+  // 기존 목업 함수를 API 호출로 변경
+  const generateBotResponse = async (query, chatMode = "verification") => {
+    try {
+      // API 요청 데이터 구성
+      const requestData = {
+        session_id: `session_${Date.now()}`, // 또는 실제 세션 ID 사용
+        message_type: "user",
+        message: query,
+        audio_requested: false,
+        is_verify: chatMode === 'verification', // true면 고증, false면 창작
+        top_n_documents: 5,
+        strictness: 2
+      };
 
-"${query}"에 대한 검색 결과입니다.
+      console.log('API 요청 데이터:', requestData);
 
-**세종실록 12권, 세종 3년 5월 15일**
-내시부(內侍府)의 제도를 개편하여 내시의 정원을 30명으로 정하고, 각각의 직무를 명확히 하였다. 내시는 왕의 측근에서 궁중 사무를 담당하며...
+      // API 호출
+      const response = await fetch('http://localhost:8001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
 
-**출처**: 조선왕조실록 > 세종실록 > 세종 3년 5월 15일
-**신뢰도**: 95%
-**관련 키워드**: 내시부, 궁중제도, 세종대왕`,
-        keywords: ["내시부", "궁중제도", "세종대왕", "조선왕조실록", "세종실록"],
-        sources: ["세종실록 12권", "경국대전"],
-      },
-      creative: {
-        content: `✨ **창작 지원 답변**
+      // 응답 처리
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-"${query}"를 바탕으로 한 창작 아이디어입니다.
+      const data = await response.json();
+      console.log('API 응답 데이터:', data);
 
-**시놉시스 제안**:
-세종 3년, 궁중 개혁의 바람이 불던 시기. 젊은 내시 김응룡은 새로운 제도 개편의 중심에 서게 되는데...
+      // API 응답을 프론트엔드 형식으로 변환
+      return {
+        id: Date.now() + 1,
+        type: "bot",
+        content: data.response || "응답을 받지 못했습니다.",
+        timestamp: new Date(data.timestamp || Date.now()),
+        keywords: data.keywords || [],
+        sources: data.sources || [],
+        // API에서 추가 데이터가 있다면 여기에 매핑
+        session_id: data.session_id,
+        apiResponse: data // 디버깅용으로 전체 응답 보관
+      };
 
-**주요 갈등 요소**:
-- 기존 세력과 신진 세력 간의 대립
-- 왕의 개혁 의지와 현실적 제약
-- 개인의 성장과 역사적 사명감
-
-**추천 참고 사료**: 세종실록, 경국대전, 승정원일기`,
-        keywords: ["창작", "시놉시스", "갈등구조", "캐릭터", "세종시대"],
-        sources: ["세종실록", "승정원일기"],
-      },
-    };
-
-    const response = responses[chatMode];
-    return {
-      id: Date.now() + 1,
-      type: "bot",
-      content: response.content,
-      timestamp: new Date(),
-      keywords: response.keywords,
-      sources: response.sources,
-    };
+    } catch (error) {
+      console.error('API 호출 오류:', error);
+    }
   };
 
   const handleKeywordClick = (keyword) => {
