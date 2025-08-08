@@ -7,7 +7,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.database import create_tables
-from api import speech, chat
+from api import speech, chat, ocr
 from config.azure_clients import azure_manager
 
 # 데이터베이스 테이블 생성
@@ -43,17 +43,20 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(speech.router, prefix="/api", tags=["speech"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
-
+app.include_router(ocr.router, prefix="/api", tags=["ocr"])
 
 @app.get("/")
 async def root():
     return {
         "message": "역사검증 도우미 API 서버",
         "version": "1.0.0",
+        "services": ["TTS/STT", "Chat", "OCR"],
         "endpoints": {
             "tts": "/api/tts",
             "stt": "/api/stt",
             "chat": "/api/chat",
+            "ocr": "/api/ocr",
+            "ocr_status": "/api/ocr/status",
             "docs": "/docs",
         },
     }

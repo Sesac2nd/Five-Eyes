@@ -33,5 +33,9 @@ def get_db():
 
 # 테이블 생성
 def create_tables():
+    # 모든 모델을 임포트하여 테이블이 생성되도록 함
+    from models.chat_model import ChatMessage, SpeechLog
+    from models.ocr_model import OCRAnalysis
+    
     Base.metadata.create_all(bind=engine)
     print("✅ 데이터베이스 테이블 생성 완료")
