@@ -30,7 +30,7 @@ jobs:
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: five-eyes-backend # App Service 이름
+          app-name: 5teamback # App Service 이름
           slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A989F9A786414385B17B295DCA209E37 }}
           package: ./Backend
