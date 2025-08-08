@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.database import create_tables
-from api import speech, chat  # OCR import 주석처리
-
-# from api import speech, chat, ocr
+from api import speech, chat
 
 # 데이터베이스 테이블 생성
 create_tables()
@@ -25,7 +23,7 @@ create_tables()
 # FastAPI 앱 생성
 app = FastAPI(
     title="역사검증 도우미 API",
-    description="조선왕조실록 기반 TTS/STT 및 채팅 서비스",  # OCR 제거
+    description="조선왕조실록 기반 TTS/STT, OCR, 채팅 및 역사 고증 서비스",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -48,8 +46,6 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(speech.router, prefix="/api", tags=["speech"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
-# OCR 라우터 주석처리
-# app.include_router(ocr.router, prefix="/api", tags=["ocr"])
 
 
 @app.get("/")
@@ -57,14 +53,14 @@ async def root():
     return {
         "message": "역사검증 도우미 API 서버",
         "version": "1.0.0",
-        "services": ["TTS/STT", "Chat"],  # OCR 제거
+        "services": ["TTS/STT", "Chat", "Historical Chat"],
         "endpoints": {
             "tts": "/api/tts",
             "stt": "/api/stt",
             "chat": "/api/chat",
-            # OCR 엔드포인트 주석처리
-            # "ocr": "/api/ocr",
-            # "ocr_status": "/api/ocr/status",
+            "historical_chat": "/api/chat",
+            "extract_keywords": "/api/extract-keywords",
+            "chat_history": "/api/chat/history/{session_id}",
             "docs": "/docs",
             "redoc": "/redoc",
         },
@@ -74,24 +70,37 @@ async def root():
 @app.get("/health")
 async def health_check():
     """서비스 상태 확인"""
-    # 기존 TTS/STT 상태
+    # TTS/STT 상태
     speech_key = os.getenv("AZURE_SPEECH_KEY")
     speech_region = os.getenv("AZURE_SPEECH_REGION")
     database_url = os.getenv("DATABASE_URL")
 
-    # OCR 서비스 상태 확인 - 주석처리
-    # from services.paddle_ocr_service import paddle_ocr_service
-    # from services.azure_ocr_service import azure_ocr_service
+    # Historical Chat 환경변수 체크
+    azure_oai_key = os.getenv("AZURE_OAI_KEY")
+    azure_oai_endpoint = os.getenv("AZURE_OAI_ENDPOINT")
+    azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+    azure_search_key = os.getenv("AZURE_SEARCH_KEY")
 
-    # Azure OCR 환경변수 - 주석처리
-    # azure_doc_endpoint = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
-    # azure_doc_key = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+    # OCR 서비스 상태 확인 (optional)
+    try:
+        from services.paddle_ocr_service import paddle_ocr_service
+        from services.azure_ocr_service import azure_ocr_service
+        ocr_available = True
+    except ImportError:
+        logger.info("OCR 서비스를 사용할 수 없습니다 (모듈 없음)")
+        ocr_available = False
+        paddle_ocr_service = None
+        azure_ocr_service = None
 
-    return {
+    # Azure OCR 환경변수
+    azure_doc_endpoint = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
+    azure_doc_key = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+
+    health_status = {
         "status": "healthy",
         "database_configured": bool(database_url),
         "services": {
-            # 기존 서비스
+            # 기본 서비스
             "speech": {
                 "configured": bool(speech_key and speech_region),
                 "speech_key": "✓" if speech_key else "✗",
@@ -101,22 +110,33 @@ async def health_check():
                 "url": database_url or "✗",
                 "status": "✓" if database_url else "✗",
             },
-            # OCR 서비스 주석처리
-            # "ocr": {
-            #     "paddle_ocr": {
-            #         "available": paddle_ocr_service.is_available(),
-            #         "status": "✓" if paddle_ocr_service.is_available() else "✗",
-            #     },
-            #     "azure_ocr": {
-            #         "available": azure_ocr_service.is_available(),
-            #         "configured": bool(azure_doc_endpoint and azure_doc_key),
-            #         "endpoint": azure_doc_endpoint or "✗",
-            #         "key": "✓" if azure_doc_key else "✗",
-            #         "status": "✓" if azure_ocr_service.is_available() else "✗",
-            #     },
-            # },
-        },
+            # Historical Chat 서비스
+            "historical_chat": {
+                "azure_openai_configured": bool(azure_oai_key and azure_oai_endpoint),
+                "azure_search_configured": bool(azure_search_endpoint and azure_search_key),
+                "rag_available": bool(azure_oai_key and azure_oai_endpoint and azure_search_endpoint and azure_search_key),
+                "status": "✓" if azure_oai_key and azure_oai_endpoint else "⚠️"
+            },
+        }
     }
+    
+    # OCR 서비스가 사용 가능한 경우에만 추가
+    if ocr_available and paddle_ocr_service and azure_ocr_service:
+        health_status["services"]["ocr"] = {
+            "paddle_ocr": {
+                "available": paddle_ocr_service.is_available(),
+                "status": "✓" if paddle_ocr_service.is_available() else "✗",
+            },
+            "azure_ocr": {
+                "available": azure_ocr_service.is_available(),
+                "configured": bool(azure_doc_endpoint and azure_doc_key),
+                "endpoint": azure_doc_endpoint or "✗",
+                "key": "✓" if azure_doc_key else "✗",
+                "status": "✓" if azure_ocr_service.is_available() else "✗",
+            },
+        }
+
+    return health_status
 
 
 @app.on_event("startup")
@@ -124,25 +144,37 @@ async def startup_event():
     """서버 시작 시 초기화"""
     logger.info("🚀 역사검증 도우미 API 서버 시작")
 
-    # OCR 서비스 상태 로깅 - 주석처리
-    # from services.paddle_ocr_service import paddle_ocr_service
-    # from services.azure_ocr_service import azure_ocr_service
+    # Historical Chat 서비스 상태 로깅
+    azure_oai_configured = bool(os.getenv("AZURE_OAI_KEY") and os.getenv("AZURE_OAI_ENDPOINT"))
+    azure_search_configured = bool(os.getenv("AZURE_SEARCH_ENDPOINT") and os.getenv("AZURE_SEARCH_KEY"))
+    
+    logger.info("📊 서비스 상태:")
+    logger.info(f"  • Historical Chat (OpenAI): {'✓' if azure_oai_configured else '✗'}")
+    logger.info(f"  • Historical Chat (Search): {'✓' if azure_search_configured else '✗'}")
+    
+    # OCR 서비스 상태 로깅 (가능한 경우)
+    try:
+        from services.paddle_ocr_service import paddle_ocr_service
+        from services.azure_ocr_service import azure_ocr_service
+        logger.info(f"  • PaddleOCR: {'✓' if paddle_ocr_service.is_available() else '✗'}")
+        logger.info(f"  • Azure OCR: {'✓' if azure_ocr_service.is_available() else '✗'}")
+    except ImportError:
+        logger.info(f"  • OCR Services: ⚠️ (모듈 없음)")
 
-    # logger.info("📊 서비스 상태:")
-    # logger.info(f"  • PaddleOCR: {'✓' if paddle_ocr_service.is_available() else '✗'}")
-    # logger.info(f"  • Azure OCR: {'✓' if azure_ocr_service.is_available() else '✗'}")
-
-    # 환경변수 체크 - OCR 관련 환경변수 체크 제거
+    # 환경변수 체크
     missing_vars = []
     if not os.getenv("AZURE_SPEECH_KEY"):
         missing_vars.append("AZURE_SPEECH_KEY")
     if not os.getenv("AZURE_SPEECH_REGION"):
         missing_vars.append("AZURE_SPEECH_REGION")
-    # OCR 관련 환경변수 체크 주석처리
-    # if not os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT"):
-    #     missing_vars.append("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
-    # if not os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY"):
-    #     missing_vars.append("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+    if not os.getenv("AZURE_OAI_KEY"):
+        missing_vars.append("AZURE_OAI_KEY")
+    if not os.getenv("AZURE_OAI_ENDPOINT"):
+        missing_vars.append("AZURE_OAI_ENDPOINT")
+    if not os.getenv("AZURE_SEARCH_ENDPOINT"):
+        missing_vars.append("AZURE_SEARCH_ENDPOINT")
+    if not os.getenv("AZURE_SEARCH_KEY"):
+        missing_vars.append("AZURE_SEARCH_KEY")
 
     if missing_vars:
         logger.warning(f"⚠️ 누락된 환경변수: {', '.join(missing_vars)}")
@@ -161,22 +193,26 @@ if __name__ == "__main__":
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", 8001))
 
-    print("=" * 60)
+    print("=" * 70)
     print("🚀 역사검증 도우미 API 서버 시작")
-    print("=" * 60)
+    print("=" * 70)
     print(f"📡 서버 주소: http://{host}:{port}")
     print(f"📚 API 문서: http://{host}:{port}/docs")
     print(f"📖 ReDoc: http://{host}:{port}/redoc")
     print(f"💊 Health Check: http://{host}:{port}/health")
-    print("=" * 60)
+    print("=" * 70)
     print("📋 사용 가능한 엔드포인트:")
     print("  • POST /api/tts - 텍스트 음성 변환")
     print("  • POST /api/stt - 음성 텍스트 변환")
-    print("  • POST /api/chat - AI 채팅")
-    # OCR 엔드포인트 주석처리
-    # print("  • POST /api/ocr - 이미지 OCR 분석")
-    # print("  • GET  /api/ocr/status - OCR 서비스 상태")
-    print("=" * 60)
+    print("  • POST /api/chat - AI 채팅 (고증검증/창작도우미)")
+    print("  • POST /api/extract-keywords - 키워드 추출")
+    print("  • GET  /api/chat/history/{session_id} - 채팅 기록 조회")
+    print("  • GET  /api/chat/status - 역사채팅 상태")
+    print("=" * 70)
+    print("  💡 채팅 모드:")
+    print("    - verification: 조선시대 한국사 고증 채팅 (엄격도 1-5단계)")
+    print("    - creative: 창작 도우미 시놉시스 생성 (창작도 1-5단계)")
+    print("=" * 70)
 
     uvicorn.run(
         app,
