@@ -16,7 +16,8 @@ alembic==1.12.1
 # Azure Services
 azure-cognitiveservices-speech==1.34.0
 azure-ai-documentintelligence
-azure-core==1.29.5
+azure-core
+
 
 # AI/ML Services  
 openai
@@ -35,5 +36,5 @@ rapidfuzz==3.5.2
 
 
 # PaddleOCR (Python 3.11 tested versions)
-paddlepaddle==2.6.1
-paddleocr==2.7.3
+#paddlepaddle==2.6.1
+#paddleocr==2.7.3

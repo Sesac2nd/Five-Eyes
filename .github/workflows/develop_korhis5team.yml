@@ -1,0 +1,79 @@
+name: Build and deploy Node.js app to Azure Web App - histpath-frontend
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./Frontend
+        run: npm ci
+      
+      - name: Build application
+        working-directory: ./Frontend
+        run: |
+          npm run build
+          echo "Build completed successfully"
+          echo "Build output structure:"
+          find dist -type f -name "*.html" -o -name "*.js" -o -name "*.css" | head -20
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'http://localhost:8001' }}
+      
+      - name: Upload artifact for deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: Frontend/dist
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./dist  # pm2 serve의 dist 경로와 일치
+      
+      - name: Verify deployment package
+        run: |
+          echo "📦 Deployment package contents:"
+          ls -la ./dist/
+          echo ""
+          echo "📄 Essential files check:"
+          test -f ./dist/index.html && echo "✅ index.html found" || echo "❌ index.html missing"
+          test -d ./dist/assets && echo "✅ assets folder found" || echo "❌ assets folder missing"
+      
+      # 🔧 핵심: 새로운 Publish Profile 사용
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'korhis5team'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}  # 🔧 새 Secret명
+          package: './dist'
+        
+      - name: Deployment verification
+        run: |
+          echo "🚀 Deployment completed"
+          echo "📍 App URL: https://korhis5team.azurewebsites.net"
