@@ -6,7 +6,7 @@ from config.database import get_db
 
 from models.ocr_model import OCRAnalysis
 from services.ocr_service import analyze_document
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 from pydantic import BaseModel
@@ -43,19 +43,20 @@ class OCRResponse(BaseModel):
 @router.post("/ocr/analyze", response_model=OCRResponse)
 async def analyze_ocr(
     file: UploadFile = File(...),
-    engine: str = "paddle",
-    extract_text_only: bool = False,
-    visualization: bool = True,
+    engine: str = Form(default="paddle"),
+    extract_text_only: bool = Form(default=False),
+    visualization: bool = Form(default=True),
     db: Session = Depends(get_db)
 ):
     """
     OCR 문서 분석 처리
     """
-    print(f"=== OCR 분석 요청 ===")
-    print(f"파일명: {file.filename}")
-    print(f"엔진: {engine}")
-    print(f"텍스트만 추출: {extract_text_only}")
-    print(f"시각화: {visualization}")
+    if IS_DEBUG:
+        print(f"=== OCR 분석 요청 ===")
+        print(f"파일명: {file.filename}")
+        print(f"엔진: {engine}")
+        print(f"텍스트만 추출: {extract_text_only}")
+        print(f"시각화: {visualization}")
 
     # 파일 형식 검증
     if not file.content_type or not file.content_type.startswith('image/'):

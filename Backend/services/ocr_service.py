@@ -243,7 +243,7 @@ def initialize_paddle_ocr():
         return ocr
 
 
-def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[str]:
+def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[Dict[str, Any]]:
     """PaddleOCR 분석 실행"""
     if not PADDLE_OCR_AVAILABLE or not ocr_object:
         return None
@@ -268,7 +268,10 @@ def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[str]:
         else:
             print("Binarized Image File Not Found.")
             return None
-            
+        
+        img_path = os.path.join(OUTPUT_DIR, f"{name}_bin_ocr_res_img.jpg")
+        vis_img_path = img_path if os.path.exists(img_path) else None
+
         json_name = bin_name.split(".")[0] + "_res.json"
         json_path = os.path.join(OUTPUT_DIR, json_name)
         
@@ -285,7 +288,11 @@ def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[str]:
             print("\n=== 연결된 전체 텍스트 ===")
             full_text = "".join(sorted_texts)
             print(full_text)
-            return full_text
+            return {
+                "full_text": full_text,
+                "visualization_path": vis_img_path,  # 존재하면 경로, 없으면 None
+                "ocr_data": ocr_data
+            }
         else:
             print("Json File Not Found.")
             return None
@@ -397,7 +404,7 @@ def analyze_document(
     
     # 디렉터리 확인 및 생성
     ensure_directories()
-    
+    print(f"analuze_doc : {engine}")
     try:
         if engine.lower() == "paddle":
             return analyze_with_paddle(file_path, extract_text_only, visualization, start_time)
@@ -453,9 +460,9 @@ def analyze_with_paddle(
             )
         
         # PaddleOCR 실행
-        extracted_text = run_paddle_ocr_analysis(file_path, ocr_instance)
+        paddle_resp = run_paddle_ocr_analysis(file_path, ocr_instance)
         
-        if not extracted_text:
+        if not paddle_resp:
             processing_time = time.time() - start_time
             return OCRResult(
                 status="failed",
@@ -463,15 +470,18 @@ def analyze_with_paddle(
                 processing_time=processing_time
             )
         
+        extracted_text = paddle_resp.get("full_text", "") or ""
+        vis_path = paddle_resp.get("visualization_path")
+        ocr_data = paddle_resp.get("ocr_data")
+
         # 단어 수 계산
         word_count = len(extracted_text.replace(" ", ""))  # 한국어/중국어의 경우 공백 제거 후 문자 수
         
         # 신뢰도 점수 (PaddleOCR은 기본적으로 신뢰도를 제공하지만, 현재 구현에서는 평균값 사용)
         confidence_score = 0.85  # 기본값
-        
         processing_time = time.time() - start_time
         
-        visualization_path = None
+        visualization_path = vis_path if visualization else None
 
         print(f"✅ PaddleOCR 분석 완료: {word_count}자, {processing_time:.2f}초")
         
@@ -482,7 +492,8 @@ def analyze_with_paddle(
             confidence_score=confidence_score,
             processing_time=processing_time,
             visualization_path=visualization_path,
-            ocr_data={"engine": "paddle", "raw_text": extracted_text} if not extract_text_only else None
+            ocr_data = ocr_data
+            # ocr_data={"engine": "paddle", "raw_text": extracted_text} if not extract_text_only else None
         )
     
     except Exception as e:
