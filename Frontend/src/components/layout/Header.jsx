@@ -1,10 +1,14 @@
 import { Link } from "react-router-dom";
 import { Menu, HelpCircle } from "lucide-react";
 import "@/styles/components/Header.css";
-import Icon from '@/assets/icons/icon.svg';
+import { useDarkMode } from "@/contexts/DarkModeContext"; // 경로 조절 필요
 
+import DarkIcon from '@/assets/icons/icon-dark.svg';   // 흰색/다크모드용 아이콘
+import LightIcon from '@/assets/icons/icon-light.svg'; // 검정/라이트모드용 아이콘
 
 function Header({ toggleSidebar }) {
+  const { isDarkMode } = useDarkMode();
+
   return (
     <header className="header">
       <button className="hamburger-btn" onClick={toggleSidebar} aria-label="메뉴 열기">
@@ -12,7 +16,11 @@ function Header({ toggleSidebar }) {
       </button>
 
       <Link to="/" className="logo">
-         <img src={Icon} alt="아이콘" className="header-icon"/> 
+         <img 
+           src={isDarkMode ? DarkIcon : LightIcon} 
+           alt="아이콘" 
+           className="header-icon"
+         /> 
       </Link>
 
       <div className="header-actions">
