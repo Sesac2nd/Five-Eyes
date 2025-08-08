@@ -1,0 +1,36 @@
+name: Deploy Backend to Azure
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 코드 가져오기
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Python 설치
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # 3. 의존성 설치
+      - name: Install dependencies
+        run: |
+          cd Backend
+          pip install -r requirements.txt
+
+      # 4. Azure App Service로 배포
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 5teamback # App Service 이름
+          slot-name: production
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A989F9A786414385B17B295DCA209E37 }}
+          package: ./Backend

@@ -16,7 +16,9 @@ function ChatbotPage() {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
@@ -33,9 +35,22 @@ function ChatbotPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const prevMessagesRef = useRef([]);
+  const isInitialLoadRef = useRef(true); // 초기 로드 여부 판단용
+
   useEffect(() => {
-    scrollToBottom();
+    if (isInitialLoadRef.current) {
+      // messages 길이가 더 길어졌을 때만(새 메시지 추가) 자동 스크롤
+      isInitialLoadRef.current = false;
+    } else {
+      // 이후 새 메시지 추가 시에만 스크롤 이동
+      if (prevMessagesRef.current.length < messages.length) {
+        scrollToBottom();
+      }
+    }
+    prevMessagesRef.current = messages;
   }, [messages]);
+
 
   // STT 결과가 있을 때 input에 반영
   useEffect(() => {
@@ -318,6 +333,7 @@ function ChatbotPage() {
       },
     ]);
     showToast("대화가 초기화되었습니다.");
+    setShowSuggestions(true);  // 리셋 시 추천 질문 다시 보이도록 설정
   };
 
   const suggestedQuestions = ["세종대왕이 가장 좋아한 음식은 무엇인가요?", "조선시대 궁중의 하루 일과는 어떠했나요?", "임진왜란 당시 의병 활동은 어떠했나요?", "영조의 균역법 개혁 배경을 알려주세요", "정조의 수원화성 건설 이유는 무엇인가요?"];
@@ -411,16 +427,25 @@ function ChatbotPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="suggested-questions">
-          <h3>추천 질문</h3>
-          <div className="questions-list">
-            {suggestedQuestions.map((question, index) => (
-              <button key={index} className="suggestion-btn" onClick={() => setInputMessage(question)}>
-                {question}
-              </button>
-            ))}
+        {showSuggestions && (
+          <div className="suggested-questions">
+            <h3>추천 질문</h3>
+            <div className="questions-list">
+              {suggestedQuestions.map((question, index) => (
+                <button 
+                  key={index} 
+                  className="suggestion-btn" 
+                  onClick={ () => {
+                    setInputMessage(question);
+                    setShowSuggestions(false); 
+                  }}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="chat-input-container">
           <div className="input-actions">
