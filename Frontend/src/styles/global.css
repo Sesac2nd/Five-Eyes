@@ -74,6 +74,7 @@ body {
   flex: 1;
   padding-top: 70px; /* Header height */
   min-height: calc(100vh - 140px); /* Header + Footer */
+  padding-bottom: 0px; /* Header height */
 }
 
 /* Overlay */
