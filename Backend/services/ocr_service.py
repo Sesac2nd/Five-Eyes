@@ -259,6 +259,8 @@ def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[Dict[str, Any
         bin_path = os.path.join(BIN_IMAGES_DIR, bin_name)
         bin_img.save(bin_path)
 
+        avg_confidence = None
+
         if os.path.exists(bin_path):
             result = ocr_object.predict(input=bin_path)
             for res in result:
@@ -269,6 +271,20 @@ def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[Dict[str, Any
             print("Binarized Image File Not Found.")
             return None
         
+        json_path = os.path.join(OUTPUT_DIR, name + "_bin_res.json")
+        res_json = None
+        rec_scores = None
+
+        if os.path.exists(json_path):
+            with open(json_path, "r") as f:
+                res_json = json.load(f)
+                rec_scores = res_json["rec_scores"]
+
+        if rec_scores:
+            scores = [float(s) for s in rec_scores if s is not None]
+            if scores:
+                avg_confidence = sum(scores) / len(scores)
+
         img_path = os.path.join(OUTPUT_DIR, f"{name}_bin_ocr_res_img.jpg")
         vis_img_path = img_path if os.path.exists(img_path) else None
 
@@ -291,7 +307,8 @@ def run_paddle_ocr_analysis(filename: str, ocr_object) -> Optional[Dict[str, Any
             return {
                 "full_text": full_text,
                 "visualization_path": vis_img_path,  # 존재하면 경로, 없으면 None
-                "ocr_data": ocr_data
+                "ocr_data": ocr_data,
+                "avg_confidence": avg_confidence
             }
         else:
             print("Json File Not Found.")
@@ -470,19 +487,20 @@ def analyze_with_paddle(
                 processing_time=processing_time
             )
         
-        extracted_text = paddle_resp.get("full_text", "") or ""
+        extracted_text = paddle_resp.get("full_text", "")
         vis_path = paddle_resp.get("visualization_path")
         ocr_data = paddle_resp.get("ocr_data")
 
         # 단어 수 계산
         word_count = len(extracted_text.replace(" ", ""))  # 한국어/중국어의 경우 공백 제거 후 문자 수
         
-        # 신뢰도 점수 (PaddleOCR은 기본적으로 신뢰도를 제공하지만, 현재 구현에서는 평균값 사용)
-        confidence_score = 0.85  # 기본값
+        # 신뢰도 점수
+        avg_confidence = paddle_resp.get("avg_confidence")
+        confidence_score = float(avg_confidence) if avg_confidence is not None else 0.0
+
+        visualization_path = vis_path if visualization else None
         processing_time = time.time() - start_time
         
-        visualization_path = vis_path if visualization else None
-
         print(f"✅ PaddleOCR 분석 완료: {word_count}자, {processing_time:.2f}초")
         
         return OCRResult(
