@@ -32,5 +32,5 @@ jobs:
         with:
           app-name: five-eyes-backend # App Service 이름
           slot-name: production
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_464EC8C7B50A43D8B582BB49AF0B55DD }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A989F9A786414385B17B295DCA209E37 }}
           package: ./Backend
