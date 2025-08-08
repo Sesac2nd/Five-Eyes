@@ -15,8 +15,9 @@ alembic==1.12.1
 
 # Azure Services
 azure-cognitiveservices-speech==1.34.0
-azure-ai-documentintelligence==1.0.0
-azure-core==1.30.0
+azure-ai-documentintelligence
+azure-core
+
 
 # AI/ML Services  
 openai

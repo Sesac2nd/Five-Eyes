@@ -39,12 +39,18 @@
 }
 
 .logo {
-  font-size: 22px;
-  font-weight: 300;
+  /* font-size: 22px;
+  font-weight: 300; */
   color: var(--text-primary);
   letter-spacing: 1px;
   text-decoration: none;
   transition: all 0.3s ease;
+}
+
+.header-icon {
+  width: 40px;    /* 원하는 너비 */
+  height: 40px;   /* 원하는 높이 */
+  display: block; /* 인라인 여백 제거용 */
 }
 
 .logo:hover {

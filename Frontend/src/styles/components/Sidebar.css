@@ -25,10 +25,31 @@
 }
 
 .sidebar-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   font-size: 18px;
   font-weight: bold;
   color: var(--text-primary);
   transition: color 0.3s ease;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-icon {
+  width: 30px !important;  /* 원하는 너비 */
+  height: 30px  !important; /* 원하는 높이 */
+  display: block;
+  margin: 0;
+  margin-top: -5px;              /* 상단 기준 딱 맞추기 위해 미세조정; 필요시 -2px ~ 2px 조정 가능 */
+  vertical-align: top;        /* 라인 정렬 보조 */
+}
+
+.sidebar-title-text {
+  line-height: 1.2;
+  margin: 0;
+  padding: 0;
+  /* 필요시 padding/margin으로 미세조정 가능 */
 }
 
 .sidebar-subtitle {
@@ -42,6 +63,8 @@
   padding: 20px;
   border-bottom: 1px solid var(--border-primary);
 }
+
+
 
 .section-title {
   font-size: 18px;
