@@ -44,31 +44,43 @@ function OcrPage() {
 
     setIsProcessing(true);
 
-    // 시뮬레이션을 위한 지연
-    setTimeout(() => {
-      const mockResult = `
-【모의 OCR 결과】
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      // 백엔드의 기본값: engine=\"paddle\" 이므로, 프론트의 선택값을 이에 맞춰 매핑
+      // selectedModel: \"ppocr\" | \"azure\"  -> engine: \"paddle\" | \"azure\"
+      const engine = selectedModel === "ppocr" ? "paddle" : "azure";
+      formData.append("engine", engine);
+      formData.append("extract_text_only", "false");
+      formData.append("visualization", "true");
 
-인조 십년 임신 사월 초팔일 기유
+      const res = await fetch("/api/ocr/analyze", {
+        method: "POST",
+        body: formData,
+      });
 
-내시 김응룡이 아뢰기를, "전하께서 어제 
-내린 명령에 따라 궁중의 제반 사무를 
-정리하였사온데, 특히 내시부의 직제를 
-재정비할 필요가 있사옵니다."
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        throw new Error(errText || `OCR 요청 실패: ${res.status}`);
+      }
 
-왕이 이르시되, "그대의 말이 옳도다. 
-내시부의 제도는 조종조로부터 내려온 
-것이니, 신중히 개혁해야 하느니라."
+      const data = await res.json();
 
-[신뢰도: ${selectedModel === "ppocr" ? "92%" : "87%"}]
-[처리 모델: ${
-        selectedModel === "ppocr" ? "PaddleOCR (한문 특화)" : "Azure Document Intelligence (범용)"
-      }]
-      `;
-      setOcrResult(mockResult);
+      // 백엔드 응답 모델(OCRResponse)에 맞춰 텍스트 반영
+      // 우선 extracted_text를 결과로 사용
+      setOcrResult(data?.extracted_text || "");
+
+      // 필요 시 상태 업데이트 확장 가능:
+      // - data.status, data.confidence_score, data.word_count 등
+
+    } catch (error) {
+      console.error(error);
+      setOcrResult(`분석 중 오류가 발생했습니다: ${error?.message || String(error)}`);
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
   };
+
 
   return (
     <div className="ocr-page">
