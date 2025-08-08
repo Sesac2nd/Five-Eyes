@@ -8,16 +8,16 @@ class ChatMessage(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), index=True)  # 채팅 세션 ID
-    message_type = Column(String(20))  # 'user', 'bot', 'historical_bot' - 확장됨
+    message_type = Column(String(20))  # 'user', 'bot', 'historical_bot'
     content = Column(Text)  # 메시지 내용
     audio_requested = Column(Boolean, default=False)  # TTS 요청 여부
-    
-   # keywords = Column(JSON, nullable=True)  # 추출된 키워드 리스트
-# ai_evaluation = Column(Text, nullable=True)  # AI 평가 결과
-# strictness_level = Column(Integer, nullable=True)  # 고증 엄격도
-# response_metadata = Column(JSON, nullable=True)  # 기타 메타데이터
 
-    
+    # ✅ 아래 항목들은 들여쓰기를 맞춰 class 안에 넣어야 함
+    keywords = Column(JSON, nullable=True)          # 추출된 키워드 리스트
+    ai_evaluation = Column(Text, nullable=True)     # AI 평가 결과
+    strictness_level = Column(Integer, nullable=True)  # 고증 엄격도
+    response_metadata = Column(JSON, nullable=True)  # 기타 메타데이터
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def to_dict(self):
@@ -33,6 +33,7 @@ class ChatMessage(Base):
             "response_metadata": self.response_metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
 
 
 class SpeechLog(Base):

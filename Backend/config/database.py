@@ -1,28 +1,28 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
 load_dotenv()
 
-# 데이터베이스 URL
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database.db")
+# 개별 설정 가져오기
+PGHOST = os.getenv("PGHOST")
+PGUSER = os.getenv("PGUSER")
+PGPORT = os.getenv("PGPORT", "5432")
+PGDATABASE = os.getenv("PGDATABASE")
+PGPASSWORD = os.getenv("PGPASSWORD")
 
-# SQLAlchemy 엔진 생성
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
+DATABASE_URL = (
+    os.getenv("DATABASE_URL") or
+    f"postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}"
 )
 
-# 세션 생성
+engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base 클래스
 Base = declarative_base()
 
-
-# 의존성: DB 세션 가져오기
 def get_db():
     db = SessionLocal()
     try:
@@ -30,8 +30,6 @@ def get_db():
     finally:
         db.close()
 
-
-# 테이블 생성
 def create_tables():
     Base.metadata.create_all(bind=engine)
-    print("✅ 데이터베이스 테이블 생성 완료")
+    print("✅ PostgreSQL: 데이터베이스 테이블 생성 완료")
