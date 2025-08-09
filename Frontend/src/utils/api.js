@@ -1,13 +1,46 @@
 import axios from "axios";
 
-// 환경변수에서 설정 읽기
-const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8001" || "https://5teamback.azurewebsites.net", 
-  TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT) || 15000,
-  APP_ENV: import.meta.env.VITE_APP_ENV || "development",
+// 환경 감지 함수
+const getEnvironment = () => {
+  // 현재 도메인 기준으로 환경 판단
+  const hostname = window.location.hostname;
+  
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "development";
+  } else if (hostname.includes("azurestaticapps.net")) {
+    return "production";
+  } else {
+    return "development"; // 기본값
+  }
 };
 
-console.log("🔧 Frontend API Configuration:", API_CONFIG);
+// 환경별 API 설정
+const getApiConfig = () => {
+  const environment = getEnvironment();
+  
+  const configs = {
+    development: {
+      BASE_URL: "http://localhost:8001",
+      TIMEOUT: 15000,
+      APP_ENV: "development",
+    },
+    production: {
+      BASE_URL: "https://5teamback.azurewebsites.net",
+      TIMEOUT: 30000, // 프로덕션에서는 더 긴 타임아웃
+      APP_ENV: "production",
+    }
+  };
+
+  return configs[environment];
+};
+
+const API_CONFIG = getApiConfig();
+
+console.log("🔧 Frontend API Configuration:", {
+  environment: getEnvironment(),
+  hostname: window.location.hostname,
+  ...API_CONFIG
+});
 
 const apiClient = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -21,7 +54,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     if (API_CONFIG.APP_ENV === "development") {
-      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     }
     return config;
   },
@@ -42,7 +75,12 @@ apiClient.interceptors.response.use(
   (error) => {
     const { response, config } = error;
     if (response) {
-      console.error(`❌ API Error: ${response.status} ${config?.url}`);
+      console.error(`❌ API Error: ${response.status} ${config?.url}`, {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        url: `${config?.baseURL}${config?.url}`
+      });
     } else {
       console.error(`❌ Network Error: ${config?.url}`, error.message);
     }
@@ -50,4 +88,6 @@ apiClient.interceptors.response.use(
   }
 );
 
+// API 설정 정보를 외부에서 접근할 수 있도록 export
+export { API_CONFIG };
 export default apiClient;
