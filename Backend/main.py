@@ -2,6 +2,13 @@
 import os
 import logging
 from dotenv import load_dotenv
+import sys
+
+if sys.getdefaultencoding().lower() != "utf-8":
+    import importlib
+
+    importlib.reload(sys)
+    sys.setdefaultencoding("utf-8")
 
 # 환경변수 로드
 load_dotenv()
@@ -31,6 +38,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+
 @app.on_event("startup")
 async def startup_event():
     """앱 시작 시 Azure 클라이언트 상태 확인"""
@@ -41,6 +49,7 @@ async def startup_event():
         print("✅ Azure 클라이언트 연결 확인 완료")
     except Exception as e:
         print(f"❌ Azure 클라이언트 연결 실패: {e}")
+
 
 # CORS 설정
 app.add_middleware(
@@ -75,7 +84,6 @@ async def root():
             "chat": "/api/chat",
             "ocr": "/api/ocr",
             "ocr_status": "/api/ocr/status",
-
             "docs": "/docs",
             "redoc": "/redoc",
         },

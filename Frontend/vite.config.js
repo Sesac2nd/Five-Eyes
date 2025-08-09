@@ -54,8 +54,8 @@ export default defineConfig(({ mode }) => {
           },
           // 로컬 개발 시 추가 설정
           ...(isLocal && {
-            timeout: 30000,
-            proxyTimeout: 30000,
+            timeout: 300000,
+            proxyTimeout: 300000,
           }),
         },
       },

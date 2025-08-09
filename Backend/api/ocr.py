@@ -46,7 +46,7 @@ async def analyze_ocr(
     engine: str = Form(default="paddle"),
     extract_text_only: bool = Form(default=False),
     visualization: bool = Form(default=True),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     OCR 문서 분석 처리
@@ -59,7 +59,7 @@ async def analyze_ocr(
         print(f"시각화: {visualization}")
 
     # 파일 형식 검증
-    if not file.content_type or not file.content_type.startswith('image/'):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="이미지 파일만 지원됩니다.")
 
     # 분석 ID 생성
@@ -67,7 +67,9 @@ async def analyze_ocr(
 
     try:
         # 업로드된 파일 임시 저장
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as temp_file:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=f"_{file.filename}"
+        ) as temp_file:
             content = await file.read()
             temp_file.write(content)
             temp_file_path = temp_file.name
@@ -77,7 +79,7 @@ async def analyze_ocr(
             file_path=temp_file_path,
             engine=engine,
             extract_text_only=extract_text_only,
-            visualization=visualization
+            visualization=visualization,
         )
 
         # 임시 파일 정리
@@ -101,7 +103,7 @@ async def analyze_ocr(
             extract_text_only=extract_text_only,
             visualization_requested=visualization,
             visualization_path=analysis_result.visualization_path,
-            error_message=analysis_result.error_message
+            error_message=analysis_result.error_message,
         )
         db.add(ocr_analysis)
         db.commit()
@@ -118,7 +120,7 @@ async def analyze_ocr(
             processing_time=analysis_result.processing_time,
             visualization_path=analysis_result.visualization_path,
             timestamp=ocr_analysis.created_at.isoformat(),
-            ocr_data=analysis_result.ocr_data if not extract_text_only else None
+            ocr_data=analysis_result.ocr_data if not extract_text_only else None,
         )
 
     except Exception as e:
@@ -128,7 +130,7 @@ async def analyze_ocr(
             os.unlink(temp_file_path)
         except:
             pass
-        
+
         # 실패한 분석 기록 저장
         try:
             failed_analysis = OCRAnalysis(
@@ -143,7 +145,7 @@ async def analyze_ocr(
                 extract_text_only=extract_text_only,
                 visualization_requested=visualization,
                 visualization_path=None,
-                error_message=str(e)
+                error_message=str(e),
             )
             db.add(failed_analysis)
             db.commit()
@@ -161,9 +163,7 @@ async def get_analysis_history(analysis_id: str, db: Session = Depends(get_db)):
     """
     try:
         analysis = (
-            db.query(OCRAnalysis)
-            .filter(OCRAnalysis.analysis_id == analysis_id)
-            .first()
+            db.query(OCRAnalysis).filter(OCRAnalysis.analysis_id == analysis_id).first()
         )
 
         if not analysis:
@@ -182,14 +182,14 @@ async def get_analysis_list(
     offset: int = 0,
     engine: Union[str, None] = None,
     status: Union[str, None] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     OCR 분석 목록 조회
     """
     try:
         query = db.query(OCRAnalysis)
-        
+
         if engine:
             query = query.filter(OCRAnalysis.engine == engine)
         if status:
@@ -216,24 +216,22 @@ async def get_visualization(analysis_id: str, db: Session = Depends(get_db)):
     """
     try:
         analysis = (
-            db.query(OCRAnalysis)
-            .filter(OCRAnalysis.analysis_id == analysis_id)
-            .first()
+            db.query(OCRAnalysis).filter(OCRAnalysis.analysis_id == analysis_id).first()
         )
 
         if not analysis:
             raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
 
         analysis_dict = analysis.to_dict()
-        viz_path = analysis_dict.get('visualization_path')
-        
+        viz_path = analysis_dict.get("visualization_path")
+
         if not viz_path or not os.path.exists(viz_path):
-            raise HTTPException(status_code=404, detail="시각화 파일을 찾을 수 없습니다.")
+            raise HTTPException(
+                status_code=404, detail="시각화 파일을 찾을 수 없습니다."
+            )
 
         return FileResponse(
-            viz_path,
-            media_type="image/png",
-            filename=f"viz_{analysis_id}.png"
+            viz_path, media_type="image/png", filename=f"viz_{analysis_id}.png"
         )
 
     except Exception as e:
