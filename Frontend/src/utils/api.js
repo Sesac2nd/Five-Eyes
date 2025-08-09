@@ -18,23 +18,16 @@ const getApiConfig = () => {
   const environment = getEnvironment();
   const hostname = window.location.hostname;
   
-  // 1순위: 런타임 환경변수 (Azure Static Web Apps에서 설정)
-  const runtimeApiUrl = window._env_?.VITE_API_BASE_URL || 
-                       window.ENV?.API_BASE_URL ||
-                       process.env.REACT_APP_API_BASE_URL;
-  
-  // 2순위: Vite 빌드타임 환경변수
-  const buildTimeApiUrl = import.meta.env?.VITE_API_BASE_URL;
-  
-  // 3순위: 도메인 기반 자동 감지
+  // 🔥 Azure Static Web Apps는 자체 도메인으로 API 프록시 사용
   const configs = {
     development: {
-      BASE_URL: runtimeApiUrl || buildTimeApiUrl || "http://localhost:8001",
+      BASE_URL: "http://localhost:8001",
       TIMEOUT: 15000,
       APP_ENV: "development",
     },
     production: {
-      BASE_URL: runtimeApiUrl || buildTimeApiUrl || "https://5teamback.azurewebsites.net",
+      // 🔥 프로덕션에서는 현재 도메인의 /api로 요청 (staticwebapp.config.json이 프록시 처리)
+      BASE_URL: "", // 빈 문자열로 하면 현재 도메인 사용
       TIMEOUT: 30000,
       APP_ENV: "production",
     }
@@ -46,10 +39,9 @@ const getApiConfig = () => {
   console.log("🔍 API URL 결정 과정:", {
     hostname,
     environment,
-    runtimeApiUrl,
-    buildTimeApiUrl,
-    finalBaseUrl: config.BASE_URL,
-    source: runtimeApiUrl ? "runtime" : buildTimeApiUrl ? "buildtime" : "default"
+    finalBaseUrl: config.BASE_URL || "현재 도메인 사용",
+    fullApiPath: config.BASE_URL ? `${config.BASE_URL}/api` : `${window.location.origin}/api`,
+    proxyEnabled: environment === "production"
   });
 
   return config;
@@ -71,11 +63,19 @@ const apiClient = axios.create({
   },
 });
 
-// 요청 인터셉터
+// 🔥 요청 인터셉터 - 환경별 경로 처리
 apiClient.interceptors.request.use(
   (config) => {
-    if (API_CONFIG.APP_ENV === "development") {
-      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    
+    // 🔥 개발환경에서는 /api 경로가 이미 포함되어 있으므로 그대로 사용
+    // 프로덕션에서는 staticwebapp.config.json이 /api/*를 백엔드로 프록시하므로 /api 경로 필요
+    if (!isDevelopment && !config.url.startsWith("/api") && !config.url.startsWith("http")) {
+      config.url = `/api${config.url}`;
+    }
+    
+    if (API_CONFIG.APP_ENV === "development" || isDevelopment) {
+      console.log(`🚀 API Request [${isDevelopment ? 'DEV' : 'PROD'}]: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     }
     return config;
   },
@@ -95,15 +95,29 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     const { response, config } = error;
-    if (response) {
+    
+    // 🔥 405 에러 특별 처리
+    if (response?.status === 405) {
+      console.error(`❌ 405 Method Not Allowed:`, {
+        url: `${config?.baseURL}${config?.url}`,
+        method: config?.method?.toUpperCase(),
+        allowedMethods: response.headers?.allow || "Unknown",
+        message: "백엔드 엔드포인트 메서드를 확인하세요"
+      });
+    } else if (response) {
       console.error(`❌ API Error: ${response.status} ${config?.url}`, {
         status: response.status,
         statusText: response.statusText,
         data: response.data,
-        url: `${config?.baseURL}${config?.url}`
+        url: `${config?.baseURL}${config?.url}`,
+        method: config?.method?.toUpperCase()
       });
     } else {
-      console.error(`❌ Network Error: ${config?.url}`, error.message);
+      console.error(`❌ Network Error: ${config?.url}`, {
+        message: error.message,
+        url: `${config?.baseURL}${config?.url}`,
+        method: config?.method?.toUpperCase()
+      });
     }
     return Promise.reject(error);
   }

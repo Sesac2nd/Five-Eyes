@@ -1,4 +1,4 @@
-// Frontend/src/pages/OcrPage.jsx - localStorage 저장 + 분석 이미지 표기 기능
+// Frontend/src/pages/OcrPage.jsx - apiClient 사용으로 수정된 완전한 파일
 import { useState, useEffect, useRef } from "react";
 import {
   Upload,
@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Eye,
 } from "lucide-react";
+import apiClient from "@/utils/api";
 import "@/styles/pages/OcrPage.css";
 
 function OcrPage() {
@@ -126,10 +127,19 @@ function OcrPage() {
 
   const checkAnalysisStatus = async (analysisId) => {
     try {
-      const response = await fetch(`/api/ocr/status/${analysisId}`);
-      if (!response.ok) throw new Error(`상태 확인 실패: ${response.status}`);
-
-      const statusData = await response.json();
+      // 🔥 환경별 API 호출 방식 구분
+      const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      
+      let response;
+      if (isDevelopment) {
+        // 개발환경: apiClient 사용 (프록시 통해 백엔드 직접 호출)
+        response = await apiClient.get(`/api/ocr/status/${analysisId}`);
+      } else {
+        // 프로덕션: apiClient 사용 (staticwebapp.config.json 프록시)
+        response = await apiClient.get(`/ocr/status/${analysisId}`);
+      }
+      
+      const statusData = response.data;
       setProgressPercentage(statusData.progress_percentage);
       setCurrentStep(statusData.current_step || "");
 
@@ -159,10 +169,19 @@ function OcrPage() {
 
   const fetchAnalysisResult = async (analysisId) => {
     try {
-      const response = await fetch(`/api/ocr/result/${analysisId}`);
-      if (!response.ok) throw new Error(`결과 조회 실패: ${response.status}`);
-
-      const resultData = await response.json();
+      // 🔥 환경별 API 호출 방식 구분
+      const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      
+      let response;
+      if (isDevelopment) {
+        // 개발환경: /api 경로 포함
+        response = await apiClient.get(`/api/ocr/result/${analysisId}`);
+      } else {
+        // 프로덕션: /api 경로 제외 (staticwebapp.config.json이 추가)
+        response = await apiClient.get(`/ocr/result/${analysisId}`);
+      }
+      
+      const resultData = response.data;
       setOcrResult(resultData.extracted_text || "추출된 텍스트가 없습니다.");
 
       if (resultData.visualization_url) {
@@ -185,14 +204,14 @@ function OcrPage() {
       console.log("✅ 분석 결과 조회 성공 및 저장 완료");
     } catch (error) {
       console.error("❌ 결과 조회 실패:", error);
-      setOcrResult(`❌ 결과 조회 실패: ${error.message}`);
+      setOcrResult(`❌ 결과 조회 실패: ${error.response?.data?.detail || error.message}`);
     }
   };
 
   const startPolling = (analysisId) => {
     pollingIntervalRef.current = setInterval(() => {
       checkAnalysisStatus(analysisId);
-    }, 3000); // 3초마다 상태 확인 (더 자주)
+    }, 3000); // 3초마다 상태 확인
   };
 
   const handleProcessAsync = async () => {
@@ -214,32 +233,50 @@ function OcrPage() {
       formData.append("extract_text_only", "false");
       formData.append("visualization", "true");
 
-      console.log("🚀 비동기식 OCR 요청:", { engine, fileName: selectedFile.name });
-
-      const response = await fetch("/api/ocr/analyze-async", {
-        method: "POST",
-        body: formData,
+      console.log("🚀 비동기식 OCR 요청:", { 
+        engine, 
+        fileName: selectedFile.name,
+        environment: window.location.hostname === "localhost" ? "development" : "production"
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      // 🔥 환경별 API 호출 방식 구분
+      const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      
+      let response;
+      if (isDevelopment) {
+        // 개발환경: /api 경로 포함하여 백엔드 직접 호출
+        response = await apiClient.post("/api/ocr/analyze-async", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        // 프로덕션: /api 경로 제외 (staticwebapp.config.json이 /api/* 프록시 처리)
+        response = await apiClient.post("/ocr/analyze-async", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
       }
 
-      const data = await response.json();
+      const data = response.data;
       const analysisId = data.analysis_id;
 
       setCurrentAnalysisId(analysisId);
       localStorage.setItem(STORAGE_KEYS.currentAnalysis, analysisId);
 
-      console.log("✅ 비동기 분석 시작:", { analysisId, estimatedTime: data.estimated_time });
+      console.log("✅ 비동기 분석 시작:", { 
+        analysisId, 
+        estimatedTime: data.estimated_time,
+        environment: isDevelopment ? "development" : "production"
+      });
 
       // 폴링 시작
       startPolling(analysisId);
     } catch (error) {
       console.error("❌ 비동기 분석 요청 실패:", error);
       setIsProcessing(false);
-      setOcrResult(`❌ ${error.message}`);
+      setOcrResult(`❌ ${error.response?.data?.detail || error.message}`);
     }
   };
 
