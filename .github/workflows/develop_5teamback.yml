@@ -22,11 +22,21 @@ jobs:
 
       # 3. 의존성 설치
       - name: Install dependencies
+        working-directory: ./Backend
         run: |
-          cd Backend
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Azure App Service로 배포
+      # 4. requirements.txt 검증
+      - name: Verify installations
+        working-directory: ./Backend
+        run: |
+          python -c "import fastapi; print('FastAPI:', fastapi.__version__)"
+          python -c "import uvicorn; print('Uvicorn:', uvicorn.__version__)"
+          python -c "import gunicorn; print('Gunicorn:', gunicorn.__version__)"
+
+
+      # 5. Azure App Service로 배포
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v2
         with:
