@@ -2,6 +2,10 @@
 import os
 import logging
 from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import HTTPException
 import sys
 
 if sys.getdefaultencoding().lower() != "utf-8":
@@ -19,8 +23,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from config.database import create_tables
 from api import speech, chat, ocr
 from config.azure_clients import azure_manager
@@ -37,6 +39,35 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# 🔥 405 에러 해결을 위한 추가 설정
+@app.middleware("http")
+async def add_cors_and_method_headers(request: Request, call_next):
+    """CORS 및 메서드 헤더 추가"""
+    response = await call_next(request)
+    
+    # CORS 헤더 추가 (중복 방지)
+    if "access-control-allow-origin" not in response.headers:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    if "access-control-allow-methods" not in response.headers:
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    if "access-control-allow-headers" not in response.headers:
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    
+    return response
+
+# 🔥 OPTIONS 요청 처리 (Preflight)
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str):
+    """모든 경로에 대한 OPTIONS 요청 처리"""
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "86400",
+        }
+    )
 
 @app.on_event("startup")
 async def startup_event():
@@ -65,6 +96,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 🔥 404/405 에러 핸들러 추가
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Not Found",
+            "message": f"The requested path {request.url.path} was not found",
+            "available_endpoints": {
+                "health": "/health",
+                "docs": "/docs",
+                "chat": "/api/chat",
+                "ocr_analyze": "/api/ocr/analyze-async",
+                "ocr_status": "/api/ocr/status/{id}",
+                "tts": "/api/tts",
+                "stt": "/api/stt",
+            }
+        }
+    )
+
+@app.exception_handler(405)
+async def method_not_allowed_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=405,
+        content={
+            "error": "Method Not Allowed",
+            "message": f"Method {request.method} not allowed for {request.url.path}",
+            "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "hint": "Check if you're using the correct HTTP method for this endpoint"
+        },
+        headers={
+            "Allow": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        }
+    )
 
 # 라우터 등록 (OCR 라우터 포함)
 app.include_router(speech.router, prefix="/api", tags=["speech"])
