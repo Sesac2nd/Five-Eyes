@@ -1,4 +1,4 @@
-// Frontend/src/pages/OcrPage.jsx - UI 레이아웃 수정 버전
+// Frontend/src/pages/OcrPage.jsx - localStorage 저장 + 분석 이미지 표기 기능
 import { useState, useEffect, useRef } from "react";
 import {
   Upload,
@@ -10,6 +10,7 @@ import {
   Clock,
   CheckCircle,
   Image as ImageIcon,
+  Eye,
 } from "lucide-react";
 import "@/styles/pages/OcrPage.css";
 
@@ -20,26 +21,63 @@ function OcrPage() {
   const [ocrResult, setOcrResult] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
 
-  // 비동기 관련 상태 (기존 코드에 추가)
-  const [useAsync, setUseAsync] = useState(true); // 기본값을 비동기로 설정
+  // 비동기 관련 상태
   const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
   const [visualizationUrl, setVisualizationUrl] = useState(null);
+  const [showVisualization, setShowVisualization] = useState(false);
+
+  // 분석 결과 저장
+  const [analysisResults, setAnalysisResults] = useState({});
 
   const pollingIntervalRef = useRef(null);
 
-  // localStorage에서 진행 중인 분석 복원
+  // localStorage 키들
+  const STORAGE_KEYS = {
+    currentAnalysis: "currentOcrAnalysis",
+    analysisResults: "ocrAnalysisResults",
+    activeAnalyses: "ocrActiveAnalyses",
+  };
+
+  // 컴포넌트 마운트 시 localStorage에서 데이터 복원
   useEffect(() => {
-    const savedAnalysisId = localStorage.getItem("currentOcrAnalysis");
+    // 저장된 분석 결과들 복원
+    const savedResults = localStorage.getItem(STORAGE_KEYS.analysisResults);
+    if (savedResults) {
+      try {
+        setAnalysisResults(JSON.parse(savedResults));
+      } catch (e) {
+        console.warn("저장된 분석 결과 파싱 실패:", e);
+      }
+    }
+
+    // 진행 중인 분석 복원
+    const savedAnalysisId = localStorage.getItem(STORAGE_KEYS.currentAnalysis);
     if (savedAnalysisId) {
       setCurrentAnalysisId(savedAnalysisId);
-      setUseAsync(true);
       setIsProcessing(true);
       checkAnalysisStatus(savedAnalysisId);
       console.log(`🔄 진행 중인 분석 복원: ${savedAnalysisId}`);
     }
   }, []);
+
+  // analysisResults 변경 시 localStorage에 저장
+  useEffect(() => {
+    if (Object.keys(analysisResults).length > 0) {
+      localStorage.setItem(STORAGE_KEYS.analysisResults, JSON.stringify(analysisResults));
+    }
+  }, [analysisResults]);
+
+  const saveAnalysisResult = (analysisId, data) => {
+    setAnalysisResults((prev) => ({
+      ...prev,
+      [analysisId]: {
+        ...data,
+        savedAt: new Date().toISOString(),
+      },
+    }));
+  };
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -48,6 +86,7 @@ function OcrPage() {
       setPreviewUrl(URL.createObjectURL(file));
       setOcrResult("");
       setVisualizationUrl(null);
+      setShowVisualization(false);
     }
   };
 
@@ -59,6 +98,7 @@ function OcrPage() {
       setPreviewUrl(URL.createObjectURL(file));
       setOcrResult("");
       setVisualizationUrl(null);
+      setShowVisualization(false);
     }
   };
 
@@ -75,7 +115,8 @@ function OcrPage() {
     setProgressPercentage(0);
     setCurrentStep("");
     setVisualizationUrl(null);
-    localStorage.removeItem("currentOcrAnalysis");
+    setShowVisualization(false);
+    localStorage.removeItem(STORAGE_KEYS.currentAnalysis);
 
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -96,7 +137,7 @@ function OcrPage() {
 
       if (statusData.status === "completed") {
         setIsProcessing(false);
-        localStorage.removeItem("currentOcrAnalysis");
+        localStorage.removeItem(STORAGE_KEYS.currentAnalysis);
         fetchAnalysisResult(analysisId);
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
@@ -105,7 +146,7 @@ function OcrPage() {
       } else if (statusData.status === "failed") {
         setIsProcessing(false);
         setOcrResult(`❌ 분석 실패: ${statusData.error_message || "알 수 없는 오류"}`);
-        localStorage.removeItem("currentOcrAnalysis");
+        localStorage.removeItem(STORAGE_KEYS.currentAnalysis);
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
@@ -128,7 +169,20 @@ function OcrPage() {
         setVisualizationUrl(resultData.visualization_url);
       }
 
-      console.log("✅ 분석 결과 조회 성공");
+      // 결과를 localStorage에 저장
+      saveAnalysisResult(analysisId, {
+        filename: resultData.filename,
+        engine: resultData.engine,
+        extracted_text: resultData.extracted_text,
+        word_count: resultData.word_count,
+        confidence_score: resultData.confidence_score,
+        processing_time: resultData.processing_time,
+        visualization_url: resultData.visualization_url,
+        timestamp: resultData.timestamp,
+        status: "completed",
+      });
+
+      console.log("✅ 분석 결과 조회 성공 및 저장 완료");
     } catch (error) {
       console.error("❌ 결과 조회 실패:", error);
       setOcrResult(`❌ 결과 조회 실패: ${error.message}`);
@@ -138,68 +192,16 @@ function OcrPage() {
   const startPolling = (analysisId) => {
     pollingIntervalRef.current = setInterval(() => {
       checkAnalysisStatus(analysisId);
-    }, 5000); // 5초마다 상태 확인
+    }, 3000); // 3초마다 상태 확인 (더 자주)
   };
 
-  // 동기식 처리 (기존 방식 유지)
-  const handleProcessSync = async () => {
-    if (!selectedFile) return;
-
-    setIsProcessing(true);
-    setOcrResult("");
-    setVisualizationUrl(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const engine = selectedModel === "ppocr" ? "paddle" : "azure";
-      formData.append("engine", engine);
-      formData.append("extract_text_only", "false");
-      formData.append("visualization", "true");
-
-      console.log("🚀 동기식 OCR 요청:", { engine, fileName: selectedFile.name });
-
-      const timeoutMs = engine === "paddle" ? 300000 : 90000;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      const res = await fetch("/api/ocr/analyze", {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${res.status}: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      setOcrResult(data.extracted_text || "추출된 텍스트가 없습니다.");
-
-      if (data.visualization_path) {
-        setVisualizationUrl(`/api/ocr/visualization/${data.analysis_id}`);
-      }
-
-      console.log("✅ 동기식 분석 완료");
-    } catch (error) {
-      console.error("❌ 동기식 분석 실패:", error);
-      setOcrResult(`❌ ${error.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // 비동기식 처리 (새로 추가)
   const handleProcessAsync = async () => {
     if (!selectedFile) return;
 
     setIsProcessing(true);
     setOcrResult("");
     setVisualizationUrl(null);
+    setShowVisualization(false);
     setProgressPercentage(0);
     setCurrentStep("분석 시작 중");
 
@@ -228,7 +230,7 @@ function OcrPage() {
       const analysisId = data.analysis_id;
 
       setCurrentAnalysisId(analysisId);
-      localStorage.setItem("currentOcrAnalysis", analysisId);
+      localStorage.setItem(STORAGE_KEYS.currentAnalysis, analysisId);
 
       console.log("✅ 비동기 분석 시작:", { analysisId, estimatedTime: data.estimated_time });
 
@@ -239,6 +241,51 @@ function OcrPage() {
       setIsProcessing(false);
       setOcrResult(`❌ ${error.message}`);
     }
+  };
+
+  const handleShowVisualization = () => {
+    if (visualizationUrl) {
+      setShowVisualization(true);
+    } else if (currentAnalysisId && analysisResults[currentAnalysisId]?.visualization_url) {
+      setVisualizationUrl(analysisResults[currentAnalysisId].visualization_url);
+      setShowVisualization(true);
+    } else {
+      alert("분석 이미지를 찾을 수 없습니다. 분석을 다시 실행해주세요.");
+    }
+  };
+
+  const renderAnalysisHistory = () => {
+    const recentResults = Object.entries(analysisResults)
+      .filter(([_, result]) => result.status === "completed")
+      .sort(([_, a], [__, b]) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 5);
+
+    if (recentResults.length === 0) return null;
+
+    return (
+      <div className="analysis-history">
+        <h4>최근 분석 결과</h4>
+        <div className="history-list">
+          {recentResults.map(([id, result]) => (
+            <div key={id} className="history-item">
+              <div className="history-info">
+                <span className="filename">{result.filename}</span>
+                <span className="timestamp">{new Date(result.timestamp).toLocaleString()}</span>
+              </div>
+              <button
+                className="btn btn-sm"
+                onClick={() => {
+                  setOcrResult(result.extracted_text);
+                  setVisualizationUrl(result.visualization_url);
+                  setCurrentAnalysisId(id);
+                }}>
+                불러오기
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -265,6 +312,8 @@ function OcrPage() {
           </div>
         </div>
       </div>
+
+      {renderAnalysisHistory()}
 
       <div className="ocr-container">
         <div className="ocr-controls">
@@ -300,39 +349,6 @@ function OcrPage() {
             </div>
           </div>
 
-          {/* 처리 방식 선택 */}
-          <div className="processing-mode">
-            <h3>처리 방식 선택</h3>
-            <div className="mode-options">
-              <label className="mode-option">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="sync"
-                  checked={!useAsync}
-                  onChange={(e) => setUseAsync(false)}
-                />
-                <div className="mode-info">
-                  <span className="mode-name">동기식 처리</span>
-                  <span className="mode-desc">기존 방식 (완료까지 대기)</span>
-                </div>
-              </label>
-              <label className="mode-option">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="async"
-                  checked={useAsync}
-                  onChange={(e) => setUseAsync(true)}
-                />
-                <div className="mode-info">
-                  <span className="mode-name">비동기 처리</span>
-                  <span className="mode-desc">백그라운드 처리 (페이지 이동 가능)</span>
-                </div>
-              </label>
-            </div>
-          </div>
-
           <div className="action-buttons">
             <label className="btn btn-primary upload-btn">
               <Upload size={16} />
@@ -350,7 +366,7 @@ function OcrPage() {
             </button>
             <button
               className="btn btn-primary"
-              onClick={useAsync ? handleProcessAsync : handleProcessSync}
+              onClick={handleProcessAsync}
               disabled={!selectedFile || isProcessing}>
               {isProcessing ? (
                 <>
@@ -360,15 +376,15 @@ function OcrPage() {
               ) : (
                 <>
                   <Play size={16} />
-                  {useAsync ? "비동기 분석" : "동기 분석"} 실행
+                  OCR 분석 실행
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* 진행률 표시 (비동기 모드일 때만) */}
-        {useAsync && isProcessing && (
+        {/* 진행률 표시 */}
+        {isProcessing && (
           <div className="progress-container">
             <div className="progress-info">
               <span className="progress-text">{currentStep || "분석 중..."}</span>
@@ -384,8 +400,8 @@ function OcrPage() {
           </div>
         )}
 
-        {/* 분석 ID 표시 (비동기 모드일 때만) */}
-        {useAsync && currentAnalysisId && (
+        {/* 분석 ID 표시 */}
+        {currentAnalysisId && (
           <div className="analysis-info">
             <p>
               분석 ID: <code>{currentAnalysisId.substring(0, 8)}...</code>
@@ -393,7 +409,7 @@ function OcrPage() {
           </div>
         )}
 
-        {/* 메인 콘텐츠 영역 - 레이아웃 개선 */}
+        {/* 메인 콘텐츠 영역 */}
         <div className="ocr-content">
           <div className="content-grid">
             {/* 왼쪽: 원본 이미지 */}
@@ -449,8 +465,8 @@ function OcrPage() {
                       </div>
                     </div>
 
-                    {/* 시각화 이미지 표시 */}
-                    {visualizationUrl && (
+                    {/* 분석 이미지 표시 토글 */}
+                    {showVisualization && visualizationUrl && (
                       <div className="visualization-section">
                         <h4>
                           <ImageIcon size={16} />
@@ -466,11 +482,28 @@ function OcrPage() {
                             }}
                           />
                         </div>
+                        <button
+                          className="btn btn-secondary mt-2"
+                          onClick={() => setShowVisualization(false)}>
+                          이미지 숨기기
+                        </button>
                       </div>
                     )}
 
                     <div className="result-actions">
-                      <button className="btn btn-secondary">실록과 비교</button>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={handleShowVisualization}
+                        disabled={
+                          !visualizationUrl &&
+                          !(
+                            currentAnalysisId &&
+                            analysisResults[currentAnalysisId]?.visualization_url
+                          )
+                        }>
+                        <Eye size={16} />
+                        분석 이미지 표기
+                      </button>
                       <button
                         className="btn btn-secondary"
                         onClick={() => {
@@ -497,9 +530,7 @@ function OcrPage() {
                       <>
                         <div className="spinner large" />
                         <p>분석 진행 중입니다...</p>
-                        {useAsync && (
-                          <p className="sub-text">페이지를 떠나도 백그라운드에서 계속 처리됩니다</p>
-                        )}
+                        <p className="sub-text">페이지를 떠나도 백그라운드에서 계속 처리됩니다</p>
                       </>
                     ) : (
                       <>
