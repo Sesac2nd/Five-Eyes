@@ -1,6 +1,16 @@
-// Frontend/src/pages/OcrPage.jsx
-import { useState, useEffect } from "react";
-import { Upload, RotateCcw, Play, FileImage, AlertCircle, Focus } from "lucide-react";
+// Frontend/src/pages/OcrPage.jsx - UI 레이아웃 수정 버전
+import { useState, useEffect, useRef } from "react";
+import {
+  Upload,
+  RotateCcw,
+  Play,
+  FileImage,
+  AlertCircle,
+  Focus,
+  Clock,
+  CheckCircle,
+  Image as ImageIcon,
+} from "lucide-react";
 import "@/styles/pages/OcrPage.css";
 
 function OcrPage() {
@@ -10,12 +20,34 @@ function OcrPage() {
   const [ocrResult, setOcrResult] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
 
+  // 비동기 관련 상태 (기존 코드에 추가)
+  const [useAsync, setUseAsync] = useState(true); // 기본값을 비동기로 설정
+  const [currentAnalysisId, setCurrentAnalysisId] = useState(null);
+  const [progressPercentage, setProgressPercentage] = useState(0);
+  const [currentStep, setCurrentStep] = useState("");
+  const [visualizationUrl, setVisualizationUrl] = useState(null);
+
+  const pollingIntervalRef = useRef(null);
+
+  // localStorage에서 진행 중인 분석 복원
+  useEffect(() => {
+    const savedAnalysisId = localStorage.getItem("currentOcrAnalysis");
+    if (savedAnalysisId) {
+      setCurrentAnalysisId(savedAnalysisId);
+      setUseAsync(true);
+      setIsProcessing(true);
+      checkAnalysisStatus(savedAnalysisId);
+      console.log(`🔄 진행 중인 분석 복원: ${savedAnalysisId}`);
+    }
+  }, []);
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
-      setOcrResult(""); // 새 파일 선택시 이전 결과 초기화
+      setOcrResult("");
+      setVisualizationUrl(null);
     }
   };
 
@@ -26,6 +58,7 @@ function OcrPage() {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
       setOcrResult("");
+      setVisualizationUrl(null);
     }
   };
 
@@ -38,16 +71,83 @@ function OcrPage() {
     setPreviewUrl("");
     setOcrResult("");
     setIsProcessing(false);
+    setCurrentAnalysisId(null);
+    setProgressPercentage(0);
+    setCurrentStep("");
+    setVisualizationUrl(null);
+    localStorage.removeItem("currentOcrAnalysis");
+
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
   };
 
-  // 비동기 OCR 처리를 위한 개선된 handleProcess 함수
+  const checkAnalysisStatus = async (analysisId) => {
+    try {
+      const response = await fetch(`/api/ocr/status/${analysisId}`);
+      if (!response.ok) throw new Error(`상태 확인 실패: ${response.status}`);
 
-  // 기존 /api/ocr/analyze 엔드포인트를 사용하되 연결 안정성을 강화한 handleProcess
+      const statusData = await response.json();
+      setProgressPercentage(statusData.progress_percentage);
+      setCurrentStep(statusData.current_step || "");
 
-  const handleProcess = async () => {
+      console.log(`📊 상태: ${statusData.progress_percentage}% - ${statusData.current_step}`);
+
+      if (statusData.status === "completed") {
+        setIsProcessing(false);
+        localStorage.removeItem("currentOcrAnalysis");
+        fetchAnalysisResult(analysisId);
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      } else if (statusData.status === "failed") {
+        setIsProcessing(false);
+        setOcrResult(`❌ 분석 실패: ${statusData.error_message || "알 수 없는 오류"}`);
+        localStorage.removeItem("currentOcrAnalysis");
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      }
+    } catch (error) {
+      console.error("❌ 상태 확인 오류:", error);
+    }
+  };
+
+  const fetchAnalysisResult = async (analysisId) => {
+    try {
+      const response = await fetch(`/api/ocr/result/${analysisId}`);
+      if (!response.ok) throw new Error(`결과 조회 실패: ${response.status}`);
+
+      const resultData = await response.json();
+      setOcrResult(resultData.extracted_text || "추출된 텍스트가 없습니다.");
+
+      if (resultData.visualization_url) {
+        setVisualizationUrl(resultData.visualization_url);
+      }
+
+      console.log("✅ 분석 결과 조회 성공");
+    } catch (error) {
+      console.error("❌ 결과 조회 실패:", error);
+      setOcrResult(`❌ 결과 조회 실패: ${error.message}`);
+    }
+  };
+
+  const startPolling = (analysisId) => {
+    pollingIntervalRef.current = setInterval(() => {
+      checkAnalysisStatus(analysisId);
+    }, 5000); // 5초마다 상태 확인
+  };
+
+  // 동기식 처리 (기존 방식 유지)
+  const handleProcessSync = async () => {
     if (!selectedFile) return;
 
     setIsProcessing(true);
+    setOcrResult("");
+    setVisualizationUrl(null);
 
     try {
       const formData = new FormData();
@@ -58,246 +158,88 @@ function OcrPage() {
       formData.append("extract_text_only", "false");
       formData.append("visualization", "true");
 
-      console.log("🚀 OCR 요청 시작:", {
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        engine: engine,
-        selectedModel: selectedModel,
-      });
+      console.log("🚀 동기식 OCR 요청:", { engine, fileName: selectedFile.name });
 
-      // 1. PaddleOCR 대기시간 안내
-      if (engine === "paddle") {
-        console.log("⏳ PaddleOCR 모드: 평균 1-2분 대기 예상");
-        console.log("🔄 한문 특화 모델 로딩 및 분석 진행중...");
-      }
-
-      // 2. 요청 전 상태 로깅 및 진행 타이머 시작
-      const requestStart = Date.now();
-      let progressTimer;
-
-      // 3. 진행상황 로깅 타이머 (15초마다)
-      const logProgress = () => {
-        const elapsed = Math.floor((Date.now() - requestStart) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-
-        if (engine === "paddle") {
-          console.log(`⏱️ PaddleOCR 진행중... ${minutes}분 ${seconds}초 경과`);
-          if (elapsed < 180) {
-            // 3분까지만 로깅
-            progressTimer = setTimeout(logProgress, 15000);
-          }
-        } else {
-          console.log(`⏱️ Azure OCR 진행중... ${elapsed}초 경과`);
-          if (elapsed < 60) {
-            // 1분까지만 로깅
-            progressTimer = setTimeout(logProgress, 10000);
-          }
-        }
-      };
-
-      // 4. 첫 진행상황 로깅 (15초 후 시작)
-      progressTimer = setTimeout(logProgress, 15000);
-
-      // 5. Fetch 요청 - 긴 타임아웃 설정 및 연결 안정성 강화
-      const timeoutMs = engine === "paddle" ? 300000 : 90000; // Paddle: 5분, Azure: 1분30초 (타임아웃 증가)
-
+      const timeoutMs = engine === "paddle" ? 300000 : 90000;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.log(`❌ ${engine} OCR 요청 타임아웃 (${timeoutMs / 1000}초)`);
-      }, timeoutMs);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      // 재시도 로직 추가
-      let retryCount = 0;
-      const maxRetries = 2;
-
-      const attemptRequest = async () => {
-        try {
-          console.log(`📡 요청 시도 ${retryCount + 1}/${maxRetries + 1}`);
-
-          const res = await fetch("/api/ocr/analyze", {
-            method: "POST",
-            body: formData,
-            signal: controller.signal,
-            // HTTP 연결 안정성 강화
-            keepalive: true,
-            // 추가 헤더로 연결 유지 요청
-            headers: {
-              Connection: "keep-alive",
-              "Cache-Control": "no-cache",
-            },
-          });
-
-          return res;
-        } catch (fetchError) {
-          console.warn(`⚠️ 요청 시도 ${retryCount + 1} 실패:`, fetchError.message);
-
-          // 네트워크 에러이고 재시도 가능한 경우
-          if (
-            retryCount < maxRetries &&
-            (fetchError.message.includes("ERR_CONNECTION") ||
-              fetchError.message.includes("network") ||
-              fetchError.name === "TypeError")
-          ) {
-            retryCount++;
-            console.log(`🔄 ${retryCount}초 후 재시도...`);
-
-            // 재시도 전 잠시 대기
-            await new Promise((resolve) => setTimeout(resolve, retryCount * 1000));
-            return attemptRequest();
-          }
-
-          // 재시도 불가능하거나 한도 초과
-          throw fetchError;
-        }
-      };
-
-      const res = await attemptRequest();
-
-      // 6. 타이머 정리
-      clearTimeout(timeoutId);
-      clearTimeout(progressTimer);
-
-      const requestEnd = Date.now();
-      const totalTime = requestEnd - requestStart;
-      const totalMinutes = Math.floor(totalTime / 60000);
-      const totalSeconds = Math.floor((totalTime % 60000) / 1000);
-
-      // 7. 응답 상태 상세 로깅
-      console.log("📡 응답 상태:", {
-        status: res.status,
-        statusText: res.statusText,
-        ok: res.ok,
-        headers: Object.fromEntries(res.headers.entries()),
-        totalProcessingTime: `${totalMinutes}분 ${totalSeconds}초 (${totalTime}ms)`,
-        engine: engine,
-        retryCount: retryCount,
+      const res = await fetch("/api/ocr/analyze", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
       });
 
-      // 8. 처리시간 분석
-      if (engine === "paddle") {
-        if (totalTime > 120000) {
-          // 2분 이상
-          console.log("🐌 PaddleOCR 처리시간이 예상보다 길었습니다 (2분+)");
-        } else if (totalTime > 60000) {
-          // 1분 이상
-          console.log("⏱️ PaddleOCR 정상 처리시간 범위 (1-2분)");
-        } else {
-          console.log("⚡ PaddleOCR 빠른 처리 완료 (1분 미만)");
-        }
-      }
+      clearTimeout(timeoutId);
 
-      // 9. 응답 처리 개선
       if (!res.ok) {
-        let errorMessage;
-        let errorDetails = {};
-
-        try {
-          // Content-Type 확인 후 적절한 파싱
-          const contentType = res.headers.get("content-type");
-
-          if (contentType && contentType.includes("application/json")) {
-            const errorData = await res.json();
-            errorMessage = errorData.detail || errorData.message || "알 수 없는 오류";
-            errorDetails = errorData;
-          } else {
-            errorMessage = await res.text();
-          }
-        } catch (parseError) {
-          console.error("❌ 응답 파싱 실패:", parseError);
-          errorMessage = `HTTP ${res.status}: ${res.statusText}`;
-        }
-
-        console.error("❌ OCR 요청 실패:", {
-          status: res.status,
-          message: errorMessage,
-          details: errorDetails,
-        });
-
-        throw new Error(`OCR 분석 실패 (${res.status}): ${errorMessage}`);
-      }
-
-      // 10. 성공 응답 처리
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error(`잘못된 응답 형식: ${contentType}`);
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${res.status}: ${res.statusText}`);
       }
 
       const data = await res.json();
+      setOcrResult(data.extracted_text || "추출된 텍스트가 없습니다.");
 
-      // 11. 응답 데이터 검증
-      console.log("✅ OCR 분석 성공:", {
-        analysisId: data.analysis_id,
-        status: data.status,
-        textLength: data.extracted_text?.length || 0,
-        confidence: data.confidence_score,
-        processingTime: data.processing_time,
-        wordCount: data.word_count,
-        retryCount: retryCount,
-      });
-
-      // 12. 응답 데이터 유효성 검사
-      if (!data.extracted_text && data.status === "success") {
-        console.warn("⚠️ 텍스트 추출 결과가 비어있습니다");
-        setOcrResult("분석은 완료되었으나 추출된 텍스트가 없습니다.");
-      } else if (data.extracted_text) {
-        setOcrResult(data.extracted_text);
-      } else {
-        throw new Error(`분석 상태: ${data.status || "unknown"}`);
+      if (data.visualization_path) {
+        setVisualizationUrl(`/api/ocr/visualization/${data.analysis_id}`);
       }
 
-      // 13. 추가 정보 표시 (옵션)
-      if (data.confidence_score) {
-        console.log(`📊 신뢰도: ${(data.confidence_score * 100).toFixed(1)}%`);
-      }
+      console.log("✅ 동기식 분석 완료");
     } catch (error) {
-      console.error("💥 OCR 처리 중 예외 발생:", error);
-
-      // 타이머 정리 (에러 시에도)
-      if (typeof progressTimer !== "undefined") {
-        clearTimeout(progressTimer);
-      }
-
-      // 사용자 친화적 오류 메시지
-      let userMessage;
-      if (error.name === "AbortError") {
-        const engineName = selectedModel === "ppocr" ? "PaddleOCR" : "Azure OCR";
-        const expectedTime = selectedModel === "ppocr" ? "5분" : "1분30초";
-        userMessage = `${engineName} 분석이 ${expectedTime} 내에 완료되지 않아 중단되었습니다. 이미지 크기를 줄이거나 다시 시도해주세요.`;
-        console.log(`⏰ ${engineName} 타임아웃 발생 - 예상 처리시간을 초과했습니다.`);
-      } else if (
-        error.name === "TypeError" &&
-        (error.message.includes("fetch") || error.message.includes("network"))
-      ) {
-        userMessage =
-          "서버와의 네트워크 연결이 불안정합니다. 백엔드에서는 분석이 계속 진행 중일 수 있습니다.";
-        console.log("🔄 재시도하거나 잠시 후 분석 기록을 확인해보세요.");
-
-        // 네트워크 에러 시 추가 안내
-        if (selectedModel === "ppocr") {
-          console.log("💡 PaddleOCR은 처리시간이 길어 네트워크 연결이 끊어질 수 있습니다.");
-          console.log("📝 해결방법: 1) 이미지 크기 축소, 2) 잠시 후 재시도, 3) Azure 모델 사용");
-        }
-      } else if (error.message.includes("파일만 지원")) {
-        userMessage = "지원되지 않는 파일 형식입니다. 이미지 파일을 업로드해주세요.";
-      } else {
-        userMessage = error.message || "분석 중 알 수 없는 오류가 발생했습니다.";
-
-        // 연결 관련 에러인지 추가 확인
-        if (error.message.includes("ERR_CONNECTION") || error.message.includes("connection")) {
-          userMessage +=
-            "\n💡 백엔드 분석은 계속 진행 중일 수 있습니다. 잠시 후 분석 기록을 확인해보세요.";
-        }
-      }
-
-      setOcrResult(`❌ ${userMessage}`);
+      console.error("❌ 동기식 분석 실패:", error);
+      setOcrResult(`❌ ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
-  // UI에서 사용할 때
-  // <button onClick={handleProcessAsync}>비동기 분석 실행</button>
+
+  // 비동기식 처리 (새로 추가)
+  const handleProcessAsync = async () => {
+    if (!selectedFile) return;
+
+    setIsProcessing(true);
+    setOcrResult("");
+    setVisualizationUrl(null);
+    setProgressPercentage(0);
+    setCurrentStep("분석 시작 중");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const engine = selectedModel === "ppocr" ? "paddle" : "azure";
+      formData.append("engine", engine);
+      formData.append("extract_text_only", "false");
+      formData.append("visualization", "true");
+
+      console.log("🚀 비동기식 OCR 요청:", { engine, fileName: selectedFile.name });
+
+      const response = await fetch("/api/ocr/analyze-async", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const analysisId = data.analysis_id;
+
+      setCurrentAnalysisId(analysisId);
+      localStorage.setItem("currentOcrAnalysis", analysisId);
+
+      console.log("✅ 비동기 분석 시작:", { analysisId, estimatedTime: data.estimated_time });
+
+      // 폴링 시작
+      startPolling(analysisId);
+    } catch (error) {
+      console.error("❌ 비동기 분석 요청 실패:", error);
+      setIsProcessing(false);
+      setOcrResult(`❌ ${error.message}`);
+    }
+  };
 
   return (
     <div className="ocr-page">
@@ -339,7 +281,7 @@ function OcrPage() {
                 />
                 <div className="model-info">
                   <span className="model-name">PaddleOCR</span>
-                  <span className="model-desc">한문 및 고문서 특화 모델</span>
+                  <span className="model-desc">한문 및 고문서 특화 모델 (1-2분 소요)</span>
                 </div>
               </label>
               <label className="model-option">
@@ -352,7 +294,40 @@ function OcrPage() {
                 />
                 <div className="model-info">
                   <span className="model-name">Azure Document Intelligence</span>
-                  <span className="model-desc">범용 문서 인식 모델</span>
+                  <span className="model-desc">범용 문서 인식 모델 (30-60초 소요)</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* 처리 방식 선택 */}
+          <div className="processing-mode">
+            <h3>처리 방식 선택</h3>
+            <div className="mode-options">
+              <label className="mode-option">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="sync"
+                  checked={!useAsync}
+                  onChange={(e) => setUseAsync(false)}
+                />
+                <div className="mode-info">
+                  <span className="mode-name">동기식 처리</span>
+                  <span className="mode-desc">기존 방식 (완료까지 대기)</span>
+                </div>
+              </label>
+              <label className="mode-option">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="async"
+                  checked={useAsync}
+                  onChange={(e) => setUseAsync(true)}
+                />
+                <div className="mode-info">
+                  <span className="mode-name">비동기 처리</span>
+                  <span className="mode-desc">백그라운드 처리 (페이지 이동 가능)</span>
                 </div>
               </label>
             </div>
@@ -375,7 +350,7 @@ function OcrPage() {
             </button>
             <button
               className="btn btn-primary"
-              onClick={handleProcess}
+              onClick={useAsync ? handleProcessAsync : handleProcessSync}
               disabled={!selectedFile || isProcessing}>
               {isProcessing ? (
                 <>
@@ -385,61 +360,156 @@ function OcrPage() {
               ) : (
                 <>
                   <Play size={16} />
-                  분석 실행
+                  {useAsync ? "비동기 분석" : "동기 분석"} 실행
                 </>
               )}
             </button>
           </div>
         </div>
 
-        <div className="ocr-content">
-          <div className="upload-section">
-            <h3>
-              <FileImage size={20} />
-              원본 이미지
-            </h3>
-            <div
-              className={`upload-area ${selectedFile ? "has-file" : ""}`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}>
-              {previewUrl ? (
-                <div className="image-preview">
-                  <img src={previewUrl} alt="업로드된 이미지" />
-                  <div className="file-info">
-                    <span>{selectedFile?.name}</span>
-                    <span>{(selectedFile?.size / 1024).toFixed(1)} KB</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="upload-placeholder">
-                  <FileImage size={35} />
-                  <p>이미지를 드래그하거나 클릭하여 업로드하세요.</p>
-                  <p className="upload-hint">지원 형식: JPG, PNG, GIF (최대 10MB)</p>
-                </div>
-              )}
+        {/* 진행률 표시 (비동기 모드일 때만) */}
+        {useAsync && isProcessing && (
+          <div className="progress-container">
+            <div className="progress-info">
+              <span className="progress-text">{currentStep || "분석 중..."}</span>
+              <span className="progress-percentage">{progressPercentage}%</span>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
+            </div>
+            <div className="progress-details">
+              <Clock size={16} />
+              <span>백그라운드에서 분석 중... 다른 페이지로 이동해도 계속 처리됩니다.</span>
             </div>
           </div>
+        )}
 
-          <div className="result-section">
-            <h3>
-              <Focus size={20} />
-              분석 결과
-            </h3>
-            <div className="result-area">
-              {ocrResult ? (
-                <div className="result-content">
-                  <pre>{ocrResult}</pre>
-                  <div className="result-actions">
-                    <button className="btn btn-secondary">실록과 비교</button>
-                    <button className="btn btn-secondary">텍스트 복사</button>
+        {/* 분석 ID 표시 (비동기 모드일 때만) */}
+        {useAsync && currentAnalysisId && (
+          <div className="analysis-info">
+            <p>
+              분석 ID: <code>{currentAnalysisId.substring(0, 8)}...</code>
+            </p>
+          </div>
+        )}
+
+        {/* 메인 콘텐츠 영역 - 레이아웃 개선 */}
+        <div className="ocr-content">
+          <div className="content-grid">
+            {/* 왼쪽: 원본 이미지 */}
+            <div className="upload-section">
+              <h3>
+                <FileImage size={20} />
+                원본 이미지
+              </h3>
+              <div
+                className={`upload-area ${selectedFile ? "has-file" : ""}`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}>
+                {previewUrl ? (
+                  <div className="image-preview">
+                    <img src={previewUrl} alt="업로드된 이미지" />
+                    <div className="file-info">
+                      <span>{selectedFile?.name}</span>
+                      <span>{(selectedFile?.size / 1024).toFixed(1)} KB</span>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="result-placeholder">
-                  <AlertCircle size={24} />
-                  <p>이미지를 업로드하고 분석을 실행하세요</p>
-                </div>
-              )}
+                ) : (
+                  <div className="upload-placeholder">
+                    <FileImage size={35} />
+                    <p>이미지를 드래그하거나 클릭하여 업로드하세요.</p>
+                    <p className="upload-hint">지원 형식: JPG, PNG, GIF (최대 10MB)</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 오른쪽: 분석 결과 */}
+            <div className="result-section">
+              <h3>
+                <Focus size={20} />
+                분석 결과
+              </h3>
+              <div className="result-area">
+                {ocrResult ? (
+                  <div className="result-content">
+                    <div className="result-header">
+                      <CheckCircle size={20} className="success-icon" />
+                      <span>분석 완료</span>
+                      {currentAnalysisId && (
+                        <span className="analysis-id">ID: {currentAnalysisId.substring(0, 8)}</span>
+                      )}
+                    </div>
+
+                    {/* 추출된 텍스트 */}
+                    <div className="text-result">
+                      <h4>추출된 텍스트</h4>
+                      <div className="extracted-text-container">
+                        <pre className="extracted-text">{ocrResult}</pre>
+                      </div>
+                    </div>
+
+                    {/* 시각화 이미지 표시 */}
+                    {visualizationUrl && (
+                      <div className="visualization-section">
+                        <h4>
+                          <ImageIcon size={16} />
+                          OCR 분석 시각화
+                        </h4>
+                        <div className="visualization-image">
+                          <img
+                            src={visualizationUrl}
+                            alt="OCR 분석 결과 시각화"
+                            onError={(e) => {
+                              console.warn("시각화 이미지 로드 실패");
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="result-actions">
+                      <button className="btn btn-secondary">실록과 비교</button>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          navigator.clipboard.writeText(ocrResult);
+                          alert("텍스트가 복사되었습니다.");
+                        }}>
+                        텍스트 복사
+                      </button>
+                      {visualizationUrl && (
+                        <a
+                          href={visualizationUrl}
+                          download={`ocr_result_${
+                            currentAnalysisId?.substring(0, 8) || "image"
+                          }.jpg`}
+                          className="btn btn-secondary">
+                          시각화 이미지 다운로드
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="result-placeholder">
+                    {isProcessing ? (
+                      <>
+                        <div className="spinner large" />
+                        <p>분석 진행 중입니다...</p>
+                        {useAsync && (
+                          <p className="sub-text">페이지를 떠나도 백그라운드에서 계속 처리됩니다</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={24} />
+                        <p>이미지를 업로드하고 분석을 실행하세요</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

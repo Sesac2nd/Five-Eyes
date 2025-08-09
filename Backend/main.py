@@ -1,4 +1,4 @@
-# main.py
+# Backend/main.py - 수정된 버전
 import os
 import logging
 from dotenv import load_dotenv
@@ -25,14 +25,13 @@ from config.database import create_tables
 from api import speech, chat, ocr
 from config.azure_clients import azure_manager
 
-
 # 데이터베이스 테이블 생성
 create_tables()
 
 # FastAPI 앱 생성
 app = FastAPI(
     title="역사검증 도우미 API",
-    description="조선왕조실록 기반 TTS/STT 및 채팅 서비스",  # OCR 제거
+    description="조선왕조실록 기반 TTS/STT, 채팅 및 OCR 서비스",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -66,7 +65,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록
+# 라우터 등록 (OCR 라우터 포함)
 app.include_router(speech.router, prefix="/api", tags=["speech"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(ocr.router, prefix="/api", tags=["ocr"])
@@ -82,7 +81,8 @@ async def root():
             "tts": "/api/tts",
             "stt": "/api/stt",
             "chat": "/api/chat",
-            "ocr": "/api/ocr",
+            "ocr": "/api/ocr/analyze",
+            "ocr_async": "/api/ocr/analyze-async",
             "ocr_status": "/api/ocr/status",
             "docs": "/docs",
             "redoc": "/redoc",
@@ -98,6 +98,15 @@ async def health_check():
     speech_region = os.getenv("AZURE_SPEECH_REGION")
     database_url = os.getenv("DATABASE_URL")
 
+    # OCR 서비스 상태 확인
+    try:
+        from services.ocr_service import get_available_engines
+
+        ocr_engines = get_available_engines()
+    except Exception as e:
+        ocr_engines = {"paddle": False, "azure": False}
+        logger.warning(f"OCR 서비스 상태 확인 실패: {e}")
+
     return {
         "status": "healthy",
         "database_configured": bool(database_url),
@@ -112,16 +121,40 @@ async def health_check():
                 "url": database_url or "✗",
                 "status": "✓" if database_url else "✗",
             },
+            # OCR 서비스 상태
+            "ocr": {
+                "paddle_ocr": {
+                    "available": ocr_engines.get("paddle", False),
+                    "status": "✓" if ocr_engines.get("paddle", False) else "✗",
+                },
+                "azure_ocr": {
+                    "available": ocr_engines.get("azure", False),
+                    "status": "✓" if ocr_engines.get("azure", False) else "✗",
+                },
+            },
         },
     }
 
 
 @app.on_event("startup")
-async def startup_event():
-    """서버 시작 시 초기화"""
+async def startup_event_ocr():
+    """서버 시작 시 OCR 서비스 초기화"""
     logger.info("🚀 역사검증 도우미 API 서버 시작")
 
-    # 환경변수 체크 - OCR 관련 환경변수 체크 제거
+    # OCR 서비스 상태 로깅
+    try:
+        from services.ocr_service import get_available_engines
+
+        ocr_engines = get_available_engines()
+        logger.info("📊 OCR 서비스 상태:")
+        logger.info(
+            f"  • PaddleOCR: {'✓' if ocr_engines.get('paddle', False) else '✗'}"
+        )
+        logger.info(f"  • Azure OCR: {'✓' if ocr_engines.get('azure', False) else '✗'}")
+    except Exception as e:
+        logger.warning(f"OCR 서비스 초기화 중 오류: {e}")
+
+    # 환경변수 체크
     missing_vars = []
     if not os.getenv("AZURE_SPEECH_KEY"):
         missing_vars.append("AZURE_SPEECH_KEY")
@@ -143,7 +176,6 @@ if __name__ == "__main__":
     import uvicorn
 
     host = os.getenv("API_HOST", "0.0.0.0")
-    # port = int(os.getenv("API_PORT", 8001))
     port = int(os.getenv("PORT", os.getenv("API_PORT", 8000)))
 
     print("=" * 60)
@@ -158,6 +190,10 @@ if __name__ == "__main__":
     print("  • POST /api/tts - 텍스트 음성 변환")
     print("  • POST /api/stt - 음성 텍스트 변환")
     print("  • POST /api/chat - AI 채팅")
+    print("  • POST /api/ocr/analyze - 동기식 OCR 분석")
+    print("  • POST /api/ocr/analyze-async - 비동기 OCR 분석")
+    print("  • GET  /api/ocr/status/{id} - OCR 분석 상태 확인")
+    print("  • GET  /api/ocr/result/{id} - OCR 분석 결과 조회")
     print("=" * 60)
 
     uvicorn.run(

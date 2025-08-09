@@ -18,3 +18,5 @@ paddleocr==3.1.0
 
 # for cache ocr
 redis==5.0.1
+
+scikit-learn>=1.3.0 
