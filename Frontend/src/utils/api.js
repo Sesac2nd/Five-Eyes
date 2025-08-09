@@ -2,7 +2,7 @@ import axios from "axios";
 
 // 환경변수에서 설정 읽기
 const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8001",
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8001" || "https://5teamback.azurewebsites.net", 
   TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT) || 15000,
   APP_ENV: import.meta.env.VITE_APP_ENV || "development",
 };

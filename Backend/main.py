@@ -55,6 +55,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://zealous-hill-099c28800.2.azurestaticapps.net/",
+        "https://5teamback.azurewebsites.net",
         "http://localhost:3000",  # React 개발 서버
         "http://127.0.0.1:3000",
         "http://localhost:5173",  # Vite 개발 서버
