@@ -1,8 +1,7 @@
 import axios from "axios";
 
-// 환경 감지 함수
+// 런타임 환경 감지 함수
 const getEnvironment = () => {
-  // 현재 도메인 기준으로 환경 판단
   const hostname = window.location.hostname;
   
   if (hostname === "localhost" || hostname === "127.0.0.1") {
@@ -10,28 +9,50 @@ const getEnvironment = () => {
   } else if (hostname.includes("azurestaticapps.net")) {
     return "production";
   } else {
-    return "development"; // 기본값
+    return "development";
   }
 };
 
-// 환경별 API 설정
+// 런타임 API 설정 (빌드 타임이 아닌 런타임에 결정)
 const getApiConfig = () => {
   const environment = getEnvironment();
+  const hostname = window.location.hostname;
   
+  // 1순위: 런타임 환경변수 (Azure Static Web Apps에서 설정)
+  const runtimeApiUrl = window._env_?.VITE_API_BASE_URL || 
+                       window.ENV?.API_BASE_URL ||
+                       process.env.REACT_APP_API_BASE_URL;
+  
+  // 2순위: Vite 빌드타임 환경변수
+  const buildTimeApiUrl = import.meta.env?.VITE_API_BASE_URL;
+  
+  // 3순위: 도메인 기반 자동 감지
   const configs = {
     development: {
-      BASE_URL: "http://localhost:8001",
+      BASE_URL: runtimeApiUrl || buildTimeApiUrl || "http://localhost:8001",
       TIMEOUT: 15000,
       APP_ENV: "development",
     },
     production: {
-      BASE_URL: "https://5teamback.azurewebsites.net",
-      TIMEOUT: 30000, // 프로덕션에서는 더 긴 타임아웃
+      BASE_URL: runtimeApiUrl || buildTimeApiUrl || "https://5teamback.azurewebsites.net",
+      TIMEOUT: 30000,
       APP_ENV: "production",
     }
   };
 
-  return configs[environment];
+  const config = configs[environment];
+  
+  // 로깅으로 어떤 방식으로 API URL이 결정되었는지 확인
+  console.log("🔍 API URL 결정 과정:", {
+    hostname,
+    environment,
+    runtimeApiUrl,
+    buildTimeApiUrl,
+    finalBaseUrl: config.BASE_URL,
+    source: runtimeApiUrl ? "runtime" : buildTimeApiUrl ? "buildtime" : "default"
+  });
+
+  return config;
 };
 
 const API_CONFIG = getApiConfig();
