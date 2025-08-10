@@ -18,7 +18,7 @@ uvicorn==0.30.6
 gunicorn==23.0.0
 python-multipart==0.0.9
 
-# paddlepaddle==3.1.0
+paddlepaddle==3.1.0
 paddleocr==3.1.0
 
 # for cache ocr

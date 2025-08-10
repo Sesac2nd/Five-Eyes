@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - develop
-    # paths:
-    #   - 'Backend/**'
 
 jobs:
   build-and-deploy:
@@ -16,37 +14,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Python 설치
+      # 2. (선택) Python 설치 - 테스트/검증용
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # 3. 의존성 설치
-      - name: Install dependencies
+      # 3. (선택) requirements.txt 검증 - 배포 전 확인만
+      - name: Verify requirements
         working-directory: ./Backend
         run: |
           python -m pip install --upgrade pip
-          sudo apt update
-          sudo apt-get -y install libgl1
-          python3 -m pip install paddlepaddle==3.1.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
-          pip install -r requirements.txt
-
-      # 4. requirements.txt 검증
-      - name: Verify installations
-        working-directory: ./Backend
-        run: |
+          pip install -r requirements.txt --no-cache-dir
           python -c "import fastapi; print('FastAPI:', fastapi.__version__)"
-          python -c "import uvicorn; print('Uvicorn:', uvicorn.__version__)"
-          python -c "import gunicorn; print('Gunicorn:', gunicorn.__version__)"
 
-
-      # 5. Azure App Service로 배포
+      # 4. Azure App Service로 배포 (Oryx 빌드 활성화)
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 5teamback # App Service 이름
+          app-name: 5teamback
           slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A989F9A786414385B17B295DCA209E37 }}
           package: ./Backend
-
+          enable-oryx-build: true

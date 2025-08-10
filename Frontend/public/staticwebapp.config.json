@@ -4,7 +4,7 @@
       "route": "/api/*",
       "allowedRoles": ["anonymous"],
       "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-      "rewrite": "https://5teamback.azurewebsites.net/api/{*catchall}",
+      "rewrite": "https://5teamback.azurewebsites.net/api/{*path}",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
@@ -17,16 +17,18 @@
       "rewrite": "https://5teamback.azurewebsites.net/health"
     }
   ],
+
   "responseOverrides": {
     "404": {
       "rewrite": "/index.html",
       "statusCode": 200
     }
   },
+
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": [
-      "/api/*", 
+      "/api/*",
       "/health",
       "*.{css,scss,sass,js,ts,jsx,tsx,mjs}",
       "*.{jpg,jpeg,png,gif,bmp,svg,ico,webp}",
@@ -34,6 +36,7 @@
       "*.{json,xml,txt,map}"
     ]
   },
+
   "mimeTypes": {
     ".json": "application/json",
     ".js": "application/javascript",
@@ -44,6 +47,7 @@
     ".woff": "font/woff",
     ".woff2": "font/woff2"
   },
+
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
