@@ -2,7 +2,12 @@
   "routes": [
     {
       "route": "/api/*",
-      "rewrite": "https://5teamback.azurewebsites.net/api/*"
+      "allowedRoles": ["anonymous"],
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
     }
   ],
   "responseOverrides": {
@@ -14,6 +19,13 @@
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": ["/api/*", "*.{css,scss,sass,js,ts,jpg,jpeg,png,gif,bmp,svg,ico}"]
+  },
+  "networking": {
+    "allowedIpRanges": []
+  },
+  "forwardingGateway": {
+    "allowedForwardedHosts": ["5teamback.azurewebsites.net"],
+    "requiredHeaders": {}
   },
   "mimeTypes": {
     ".json": "application/json",
