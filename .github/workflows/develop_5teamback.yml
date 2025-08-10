@@ -28,7 +28,6 @@ jobs:
           sudo apt update
           # 기본 OpenGL 및 시스템 라이브러리
           sudo apt-get -y install \
-            libgl1-mesa-glx \
             libgl1-mesa-dri \
             libglib2.0-0 \
             libsm6 \
