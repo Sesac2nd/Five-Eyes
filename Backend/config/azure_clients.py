@@ -27,8 +27,8 @@ class AzureClientManager:
         """클라이언트 초기화"""
         try:
             # OpenAI 클라이언트 설정
-            chat_key = os.getenv("AZURE_OAI_KEY", "")
-            chat_endpoint = os.getenv("AZURE_OAI_ENDPOINT", "")
+            chat_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+            chat_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
             chat_api_version = os.getenv("AZURE_OAI_API_VER", "")
             
             self._chat_client = AzureOpenAI(
@@ -38,7 +38,7 @@ class AzureClientManager:
             )
             
             # Search 클라이언트 설정
-            search_key = os.getenv("AZURE_SEARCH_KEY", "")
+            search_key = os.getenv("AZURE_SEARCH_API_KEY", "")
             search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
             search_index = os.getenv("AZURE_SEARCH_INDEX_NAME", "")
             
