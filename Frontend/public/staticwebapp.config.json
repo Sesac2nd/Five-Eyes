@@ -20,10 +20,6 @@
     "rewrite": "/index.html",
     "exclude": ["/api/*", "*.{css,scss,sass,js,ts,jpg,jpeg,png,gif,bmp,svg,ico}"]
   },
-    "forwardingGateway": {
-    "allowedForwardedHosts": ["5teamback.azurewebsites.net"],
-    "requiredHeaders": {}
-  },
   "mimeTypes": {
     ".json": "application/json",
     ".js": "text/javascript",
