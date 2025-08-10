@@ -54,7 +54,7 @@ const navigation = [
   },
     // 🔥 Catch-all 라우트 추가 (모든 미매칭 경로를 ErrorPage로)
   {
-    text: "잘못된 경로입니다."
+    text: "잘못된 경로입니다.",
     path: "*",
     element: <ErrorPage />,
     hideInMenu: true,
