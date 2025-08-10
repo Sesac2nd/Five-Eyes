@@ -25,6 +25,9 @@ jobs:
         working-directory: ./Backend
         run: |
           python -m pip install --upgrade pip
+          apt update
+          apt-get -y install libgl1-mesa-glx
+          python3 -m pip install paddlepaddle==3.1.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
           pip install -r requirements.txt
 
       # 4. requirements.txt 검증
