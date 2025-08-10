@@ -5,4 +5,4 @@ export { default as ChatbotPage } from "./ChatbotPage";
 export { default as SearchResultsPage } from "./SearchResultsPage";
 export { default as HelpPage } from "./HelpPage";
 export { default as CreditsPage } from "./CreditsPage";
-export { default as Error } from "./ErrorPage";
+export { default as ErrorPage } from "./ErrorPage";
