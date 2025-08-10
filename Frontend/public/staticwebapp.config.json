@@ -2,56 +2,27 @@
   "routes": [
     {
       "route": "/api/*",
-      "allowedRoles": ["anonymous"],
-      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-      "rewrite": "https://5teamback.azurewebsites.net/api/{*path}",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-        "Access-Control-Max-Age": "86400"
-      }
-    },
-    {
-      "route": "/health",
-      "rewrite": "https://5teamback.azurewebsites.net/health"
+      "rewrite": "https://5teamback.azurewebsites.net/api/*"
     }
   ],
-
   "responseOverrides": {
     "404": {
       "rewrite": "/index.html",
       "statusCode": 200
     }
   },
-
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": [
-      "/api/*",
-      "/health",
-      "*.{css,scss,sass,js,ts,jsx,tsx,mjs}",
-      "*.{jpg,jpeg,png,gif,bmp,svg,ico,webp}",
-      "*.{woff,woff2,ttf,eot}",
-      "*.{json,xml,txt,map}"
-    ]
+    "exclude": ["/api/*", "*.{css,scss,sass,js,ts,jpg,jpeg,png,gif,bmp,svg,ico}"]
   },
-
   "mimeTypes": {
     ".json": "application/json",
-    ".js": "application/javascript",
-    ".mjs": "application/javascript",
-    ".css": "text/css",
-    ".svg": "image/svg+xml",
-    ".ico": "image/x-icon",
-    ".woff": "font/woff",
-    ".woff2": "font/woff2"
+    ".js": "text/javascript",
+    ".css": "text/css"
   },
-
   "globalHeaders": {
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "X-XSS-Protection": "1; mode=block"
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization"
   }
 }
