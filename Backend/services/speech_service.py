@@ -3,8 +3,7 @@ import base64
 import azure.cognitiveservices.speech as speechsdk
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
-# ✅ 수정: 새로운 모델 파일에서 import
-from models.chat import SpeechLog
+from models.chat_model import SpeechLog
 
 load_dotenv()
 
@@ -129,7 +128,7 @@ class SpeechService:
             return {"success": False, "audio_data": None, "error": error_msg}
 
     def speech_to_text(self, audio_data: bytes, db: Session = None) -> dict:
-        """STT 서비스"""
+        """STT 서비스 (나중에 구현)"""
 
         log_entry = None
         if db:

@@ -16,8 +16,8 @@ function ChatbotPage() {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [chatMode, setChatMode] = useState("verification"); // verification | creative
-  const [strictness, setStrictness] = useState(3); // 엄격도 상태
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -50,6 +50,7 @@ function ChatbotPage() {
     }
     prevMessagesRef.current = messages;
   }, [messages]);
+
 
   // STT 결과가 있을 때 input에 반영
   useEffect(() => {
@@ -147,65 +148,98 @@ function ChatbotPage() {
     setToastType("success");
   };
 
-  // 실제 API 호출로 변경 - chat_mode 및 strictness 추가
+    // // 호출하는 곳에서 사용법 (async/await 처리 필요)
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+    if (!inputMessage.trim()) return;
 
+    // 사용자 메시지 추가
     const userMessage = {
       id: Date.now(),
       type: "user",
       content: inputMessage,
       timestamp: new Date(),
     };
-
-    setMessages((prev) => [...prev, userMessage]);
-    const currentMessage = inputMessage;
+    
+    setMessages(prev => [...prev, userMessage]);
+    const query = inputMessage;
     setInputMessage("");
-    setIsLoading(true);
-    setShowSuggestions(false); // 메시지 전송 시 추천 질문 숨김
 
     try {
-      // 실제 API 호출 - chat_mode 및 strictness 추가
+      // 로딩 상태 표시
+      setIsLoading(true);
+      
+      // API 호출 (await 사용)
+      const botResponse = await generateBotResponse(query, chatMode);
+      
+      // 봇 응답 추가
+      setMessages(prev => [...prev, botResponse]);
+      
+    } catch (error) {
+      console.error('메시지 전송 오류:', error);
+      
+      // 에러 메시지 표시
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: "bot",
+        content: "죄송합니다. 메시지 처리 중 오류가 발생했습니다.",
+        timestamp: new Date(),
+        error: true
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 기존 목업 함수를 API 호출로 변경
+  const generateBotResponse = async (query, chatMode = "verification") => {
+    try {
+      // API 요청 데이터 구성
+      const requestData = {
+        session_id: `session_${Date.now()}`, // 또는 실제 세션 ID 사용
+        message_type: "user",
+        message: query,
+        audio_requested: false,
+        is_verify: chatMode === 'verification', // true면 고증, false면 창작
+        top_n_documents: 5,
+        strictness: 2
+      };
+
+      console.log('API 요청 데이터:', requestData);
+
+      // API 호출
       const response = await fetch('http://localhost:8001/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: currentMessage,
-          strictness: strictness, // 엄격도 전달
-          chat_mode: chatMode, // 채팅 모드 전달
-        }),
+        body: JSON.stringify(requestData)
       });
 
-      const data = await response.json();
-
+      // 응답 처리
       if (!response.ok) {
-        throw new Error(data.detail || '서버 오류가 발생했습니다.');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const botResponse = {
+      const data = await response.json();
+      console.log('API 응답 데이터:', data);
+
+      // API 응답을 프론트엔드 형식으로 변환
+      return {
         id: Date.now() + 1,
         type: "bot",
-        content: data.response,
-        timestamp: new Date(),
+        content: data.response || "응답을 받지 못했습니다.",
+        timestamp: new Date(data.timestamp || Date.now()),
         keywords: data.keywords || [],
         sources: data.sources || [],
+        // API에서 추가 데이터가 있다면 여기에 매핑
+        session_id: data.session_id,
+        apiResponse: data // 디버깅용으로 전체 응답 보관
       };
 
-      setMessages((prev) => [...prev, botResponse]);
     } catch (error) {
       console.error('API 호출 오류:', error);
-      const errorMessage = {
-        id: Date.now() + 1,
-        type: "bot",
-        content: `❌ 오류가 발생했습니다: ${error.message}`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      showToast("메시지 전송 중 오류가 발생했습니다.", "error");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -302,18 +336,7 @@ function ChatbotPage() {
     setShowSuggestions(true);  // 리셋 시 추천 질문 다시 보이도록 설정
   };
 
-  const suggestedQuestions = [
-    "세종대왕이 가장 좋아한 음식은 무엇인가요?",
-    "조선시대 궁중의 하루 일과는 어떠했나요?",
-    "임진왜란 당시 의병 활동은 어떠했나요?",
-    "영조의 균역법 개혁 배경을 알려주세요",
-    "정조의 수원화성 건설 이유는 무엇인가요?"
-  ];
-
-  // 엄격도 라벨 동적 변경
-  const getStrictnessLabel = () => {
-    return chatMode === "verification" ? "고증 엄격도" : "창작 엄격도";
-  };
+  const suggestedQuestions = ["세종대왕이 가장 좋아한 음식은 무엇인가요?", "조선시대 궁중의 하루 일과는 어떠했나요?", "임진왜란 당시 의병 활동은 어떠했나요?", "영조의 균역법 개혁 배경을 알려주세요", "정조의 수원화성 건설 이유는 무엇인가요?"];
 
   return (
     <div className={`chatbot-page ${chatMode}`}>
@@ -337,16 +360,10 @@ function ChatbotPage() {
         </div>
 
         <div className="chat-modes">
-          <button
-            className={`mode-btn ${chatMode === "verification" ? "active verification" : ""}`}
-            onClick={() => setChatMode("verification")}
-          >
+          <button className={`mode-btn ${chatMode === "verification" ? "active verification" : ""}`} onClick={() => setChatMode("verification")}>
             📚 고증 검증
           </button>
-          <button
-            className={`mode-btn ${chatMode === "creative" ? "active creative" : ""}`}
-            onClick={() => setChatMode("creative")}
-          >
+          <button className={`mode-btn ${chatMode === "creative" ? "active creative" : ""}`} onClick={() => setChatMode("creative")}>
             ✨ 창작 도우미
           </button>
         </div>
@@ -366,11 +383,7 @@ function ChatbotPage() {
                 {message.keywords && message.keywords.length > 0 && (
                   <div className="message-keywords">
                     {message.keywords.map((keyword, index) => (
-                      <button
-                        key={index}
-                        className="keyword-btn"
-                        onClick={() => handleKeywordClick(keyword)}
-                      >
+                      <button key={index} className="keyword-btn" onClick={() => handleKeywordClick(keyword)}>
                         {keyword}
                       </button>
                     ))}
@@ -386,27 +399,16 @@ function ChatbotPage() {
 
               {message.type === "bot" && (
                 <div className="message-actions">
-                  <button
-                    className={`action-btn ${isSpeaking ? "speaking" : ""}`}
-                    onClick={() => handleSpeakMessage(message.content)}
-                    title={isSpeaking ? "음성 출력 중... (ESC로 중단)" : "음성으로 듣기"}
-                    disabled={false}
-                  >
+                  <button className={`action-btn ${isSpeaking ? "speaking" : ""}`} onClick={() => handleSpeakMessage(message.content)} title={isSpeaking ? "음성 출력 중... (ESC로 중단)" : "음성으로 듣기"} disabled={false}>
                     <Volume2 size={16} />
                   </button>
-                  <button
-                    className="action-btn"
-                    onClick={() => handleCopyMessage(message.content)}
-                    title="복사하기"
-                  >
+                  <button className="action-btn" onClick={() => handleCopyMessage(message.content)} title="복사하기">
                     <Copy size={16} />
                   </button>
                 </div>
               )}
 
-              <div className="message-time">
-                {message.timestamp.toLocaleTimeString()}
-              </div>
+              <div className="message-time">{message.timestamp.toLocaleTimeString()}</div>
             </div>
           ))}
 
@@ -430,12 +432,12 @@ function ChatbotPage() {
             <h3>추천 질문</h3>
             <div className="questions-list">
               {suggestedQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  className="suggestion-btn"
-                  onClick={() => {
+                <button 
+                  key={index} 
+                  className="suggestion-btn" 
+                  onClick={ () => {
                     setInputMessage(question);
-                    setShowSuggestions(false);
+                    setShowSuggestions(false); 
                   }}
                 >
                   {question}
@@ -447,66 +449,19 @@ function ChatbotPage() {
 
         <div className="chat-input-container">
           <div className="input-actions">
-            <button
-              className="action-btn"
-              onClick={handleReset}
-              title="대화 초기화"
-            >
+            <button className="action-btn" onClick={handleReset} title="대화 초기화">
               <RotateCcw size={18} />
             </button>
-            <button
-              className={`action-btn ${isRecording ? "recording" : ""}`}
-              onClick={toggleListening}
-              title={isRecording ? "음성 입력 중지" : "음성 입력 시작"}
-              disabled={isLoading}
-            >
+            <button className={`action-btn ${isRecording ? "recording" : ""}`} onClick={toggleListening} title={isRecording ? "음성 입력 중지" : "음성 입력 시작"} disabled={isLoading}>
               {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
           </div>
 
           <div className="input-wrapper">
-            <textarea
-              ref={inputRef}
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요..." : "창작하고 싶은 내용을 말씀해주세요..."}`}
-              rows="1"
-              className="chat-input"
-              disabled={isRecording}
-            />
-            <button
-              className="send-btn"
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading || isRecording}
-            >
+            <textarea ref={inputRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요..." : "창작하고 싶은 내용을 말씀해주세요..."}`} rows="1" className="chat-input" disabled={isRecording} />
+            <button className="send-btn" onClick={handleSendMessage} disabled={!inputMessage.trim() || isLoading || isRecording}>
               <Send size={18} />
             </button>
-          </div>
-
-          {/* 엄격도 슬라이더 - 라벨 동적 변경 */}
-          <div className="strictness-container">
-            <div className="strictness-label">
-              <span>{getStrictnessLabel()}</span>
-              <span className="strictness-value">{strictness}</span>
-            </div>
-            <div className="strictness-slider">
-              <span className="slider-label">
-                {chatMode === "verification" ? "관대" : "자유"}
-              </span>
-              <input
-                type="range"
-                min="1"
-                max="5"
-                value={strictness}
-                onChange={(e) => setStrictness(parseInt(e.target.value))}
-                className="slider"
-                disabled={isLoading}
-              />
-              <span className="slider-label">
-                {chatMode === "verification" ? "엄격" : "제한"}
-              </span>
-            </div>
           </div>
         </div>
       </div>
