@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - "Backend/**"
 
 jobs:
   build-and-deploy:
@@ -20,27 +22,210 @@ jobs:
         with:
           python-version: "3.11"
 
-      # 3. 의존성 설치
-      - name: Install dependencies
+      # 3. 시스템 의존성 설치 (PaddleOCR 완전 지원)
+      - name: Install system dependencies for PaddleOCR
+        run: |
+          sudo apt update
+          # 기본 OpenGL 및 시스템 라이브러리
+          sudo apt-get -y install \
+            libgl1-mesa-dri \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev \
+            libgomp1
+
+          # OpenCV 및 비디오 처리를 위한 추가 라이브러리
+          sudo apt-get -y install \
+            libgtk-3-0 \
+            libavcodec-dev \
+            libavformat-dev \
+            libswscale-dev \
+            libv4l-dev \
+            libxvidcore-dev \
+            libx264-dev
+
+      # 4. Python 의존성 설치
+      - name: Install Python dependencies
         working-directory: ./Backend
         run: |
           python -m pip install --upgrade pip
+          # PaddlePaddle CPU 버전 먼저 설치
+          python3 -m pip install paddlepaddle==3.1.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          # 나머지 의존성 설치
           pip install -r requirements.txt
 
-      # 4. requirements.txt 검증
-      - name: Verify installations
+      # 5. 핵심 패키지 검증
+      - name: Verify core installations
         working-directory: ./Backend
         run: |
-          python -c "import fastapi; print('FastAPI:', fastapi.__version__)"
-          python -c "import uvicorn; print('Uvicorn:', uvicorn.__version__)"
-          python -c "import gunicorn; print('Gunicorn:', gunicorn.__version__)"
+          echo "=== 🔧 기본 패키지 검증 ==="
+          python -c "import fastapi; print('✅ FastAPI:', fastapi.__version__)"
+          python -c "import uvicorn; print('✅ Uvicorn:', uvicorn.__version__)"
+          python -c "import gunicorn; print('✅ Gunicorn:', gunicorn.__version__)"
 
+          echo "=== 🤖 AI/ML 패키지 검증 ==="
+          python -c "
+          try:
+              import paddle
+              print('✅ Paddle:', paddle.__version__)
+              print('🔧 Paddle 설정 확인...')
+              paddle.set_flags({
+                  'FLAGS_fraction_of_cpu_memory_to_use': 0.5,
+                  'FLAGS_eager_delete_tensor_gb': 0.0,
+                  'FLAGS_fast_eager_deletion_mode': True,
+                  'FLAGS_use_mkldnn': False,
+              })
+              print('✅ Paddle 설정 완료')
+          except Exception as e:
+              print('❌ Paddle 실패:', e)
+              exit(1)
+          "
 
-      # 5. Azure App Service로 배포
+      # 6. PaddleOCR 심화 검증
+      - name: Deep verification of PaddleOCR
+        working-directory: ./Backend
+        run: |
+          echo "=== 📄 PaddleOCR 및 의존성 검증 ==="
+          python -c "
+          import os
+          os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
+          try:
+              # 필수 의존성 확인
+              import cv2
+              print('✅ OpenCV:', cv2.__version__)
+              
+              import numpy as np
+              print('✅ NumPy:', np.__version__)
+              
+              from sklearn.cluster import DBSCAN
+              print('✅ scikit-learn DBSCAN 임포트 성공')
+              
+              from PIL import Image
+              print('✅ PIL/Pillow 임포트 성공')
+              
+              # PaddleOCR 임포트 및 초기화 테스트
+              from paddleocr import PaddleOCR
+              print('✅ PaddleOCR 임포트 성공')
+              
+              # 실제 초기화 테스트 (간단한 설정으로)
+              print('🔧 PaddleOCR 초기화 테스트...')
+              ocr = PaddleOCR(
+                  lang='chinese_cht',
+                  use_angle_cls=False,
+                  enable_mkldnn=False,
+                  cpu_threads=1,
+                  show_log=False
+              )
+              print('✅ PaddleOCR 초기화 성공!')
+              
+          except Exception as e:
+              print('❌ PaddleOCR 검증 실패:', e)
+              import traceback
+              traceback.print_exc()
+              exit(1)
+          "
+
+      # 7. OCR 서비스 통합 테스트
+      - name: Test OCR Service Integration
+        working-directory: ./Backend
+        run: |
+          echo "=== 🔍 OCR 서비스 통합 테스트 ==="
+          python -c "
+          import sys
+          sys.path.append('.')
+          try:
+              from services.ocr_service import get_available_engines
+              engines = get_available_engines()
+              print(f'🔧 사용 가능한 OCR 엔진: {engines}')
+              
+              # PaddleOCR 엔진이 활성화되어야 함
+              if not engines.get('paddle', False):
+                  print('❌ PaddleOCR 엔진이 비활성화됨!')
+                  exit(1)
+              
+              # Azure OCR도 확인
+              if not engines.get('azure', False):
+                  print('⚠️ Azure OCR 엔진 비활성화됨 (환경변수 확인 필요)')
+              
+              print('✅ OCR 서비스 통합 테스트 성공!')
+              
+          except Exception as e:
+              print(f'❌ OCR 서비스 테스트 실패: {e}')
+              import traceback
+              traceback.print_exc()
+              exit(1)
+          "
+
+      # 8. 최종 Azure 패키지 확인
+      - name: Verify Azure integrations
+        working-directory: ./Backend
+        run: |
+          echo "=== ☁️ Azure 서비스 패키지 검증 ==="
+          python -c "
+          try:
+              from azure.cognitiveservices.speech import SpeechConfig
+              print('✅ Azure Speech Service 임포트 성공')
+              
+              from azure.ai.formrecognizer import DocumentAnalysisClient
+              print('✅ Azure Form Recognizer 임포트 성공')
+              
+              from azure.search.documents import SearchClient
+              print('✅ Azure Search Service 임포트 성공')
+              
+              print('✅ 모든 Azure 서비스 패키지 정상!')
+              
+          except Exception as e:
+              print('⚠️ Azure 패키지 확인:', e)
+              print('(환경변수가 설정되지 않아도 정상적인 경우일 수 있음)')
+          "
+
+      # 9. 최종 헬스체크 시뮬레이션
+      - name: Simulate health check
+        working-directory: ./Backend
+        run: |
+          echo "=== 💊 헬스체크 시뮬레이션 ==="
+          python -c "
+          import sys
+          sys.path.append('.')
+
+          # 환경변수 체크 없이 서비스 상태만 확인
+          try:
+              from services.ocr_service import get_available_engines
+              ocr_engines = get_available_engines()
+              
+              health_status = {
+                  'ocr': {
+                      'paddle_ocr': {
+                          'available': ocr_engines.get('paddle', False),
+                          'status': '✓' if ocr_engines.get('paddle', False) else '✗'
+                      },
+                      'azure_ocr': {
+                          'available': ocr_engines.get('azure', False),
+                          'status': '✓' if ocr_engines.get('azure', False) else '✗'
+                      }
+                  }
+              }
+              
+              print(f'💊 최종 헬스체크 결과: {health_status}')
+              
+              if not health_status['ocr']['paddle_ocr']['available']:
+                  print('❌ PaddleOCR이 비활성화됨! 배포 중단')
+                  exit(1)
+              
+              print('✅ 헬스체크 통과! 배포 진행 가능')
+              
+          except Exception as e:
+              print(f'❌ 헬스체크 실패: {e}')
+              exit(1)
+          "
+
+      # 10. Azure App Service로 배포
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 5teamback # App Service 이름
+          app-name: 5teamback
           slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A989F9A786414385B17B295DCA209E37 }}
           package: ./Backend
