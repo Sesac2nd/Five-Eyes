@@ -4,26 +4,40 @@
 .ocr-page {
   max-width: 1200px;
   margin: 0 auto;
+  /* height: calc(100vh - 140px); */
+  /* display: flex; */
+  /* flex-direction: column; */
   padding: 20px;
-  min-height: calc(100vh - 140px);
+   /* min-height: 100vh;    전체 뷰포트 채움 */
 }
 
 .page-header {
+  margin-bottom: 40px;
   text-align: center;
-  margin-bottom: 30px;
 }
 
 .page-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 10px;
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.dark .page-header h1 {
+  font-size: 2rem;
+  color: #fff;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .page-header p {
-  font-size: 1.1rem;
-  color: #6c757d;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-bottom: 20px;
 }
+.dark .page-header p {
+  color: #dedede;
+  font-size: 1rem;
 
 /* 정보 그리드 */
 .ocr-info {
@@ -129,6 +143,7 @@
 }
 
 /* 컨트롤 영역 */
+
 .ocr-controls {
   padding: 25px;
   background: #f8f9fa;

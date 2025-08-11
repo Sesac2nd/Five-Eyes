@@ -458,7 +458,7 @@ function ChatbotPage() {
           </div>
 
           <div className="input-wrapper">
-            <textarea ref={inputRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요..." : "창작하고 싶은 내용을 말씀해주세요..."}`} rows="1" className="chat-input" disabled={isRecording} />
+            <textarea ref={inputRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder={`${chatMode === "verification" ? "역사적 사실에 대해 질문해보세요." : "창작하고 싶은 내용을 말씀해주세요."}`} rows="1" className="chat-input" disabled={isRecording} />
             <button className="send-btn" onClick={handleSendMessage} disabled={!inputMessage.trim() || isLoading || isRecording}>
               <Send size={18} />
             </button>

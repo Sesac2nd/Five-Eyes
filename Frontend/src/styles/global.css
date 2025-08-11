@@ -74,6 +74,7 @@ body {
   flex: 1;
   padding-top: 70px; /* Header height */
   min-height: calc(100vh - 140px); /* Header + Footer */
+  padding-bottom: 0px; /* Header height */
 }
 
 /* Overlay */
@@ -693,6 +694,16 @@ body {
 .card:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+}
+
+.project-details {
+  line-height: 2;
+  font-size: 1.08rem;
+  color: var(--text-primary); /* 라이트 모드 기본색 */
+}
+
+.dark .project-details {
+  color: #fff; /* 다크 모드일 때 흰색 */
 }
 
 /* Responsive Design */

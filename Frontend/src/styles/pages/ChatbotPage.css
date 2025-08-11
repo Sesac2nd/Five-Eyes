@@ -17,7 +17,7 @@
   font-size: 2rem;
   color: var(--text-primary);
   margin-bottom: 8px;
-  font-weight: 300;
+  font-weight: 500;
 }
 
 .chat-title p {
@@ -328,7 +328,7 @@
   border: 1px solid var(--border-primary);
   border-radius: 20px;
   padding: 5px 12px;
-  height: auto;
+  height: 60px;
 }
 
 .chat-input {
@@ -337,7 +337,7 @@
   background: none;
   outline: none;
   resize: none;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   max-height: 120px;
   overflow-y: auto;

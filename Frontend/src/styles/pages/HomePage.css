@@ -17,15 +17,13 @@
 .home-page::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+  top: 0; left: 0; bottom: 0; right: 0;
   background: url("/img/history-bg_4.jpg") center center / cover no-repeat;
   filter: blur(2px) brightness(0.7); /* 블러+살짝 어둡게 */
   z-index: 0;
   pointer-events: none;
 }
+
 
 /* 컨텐츠가 오버레이 위에 올라오게 설정 */
 .home-content {
@@ -48,7 +46,7 @@
 
 .logo-main {
   font-size: 60px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 20px;
   letter-spacing: 2px;

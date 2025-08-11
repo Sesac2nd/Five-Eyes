@@ -37,8 +37,8 @@ function CreditsPage() {
   return (
     <div className="credits-page">
       <div className="page-header">
-        <h1 style={{ fontWeight: "bold" }}>🧑‍💻 만든이</h1>
-        <p>역사로 프로젝트를 만든 팀을 소개합니다 😀</p>
+        <h1>만든이</h1>
+        <p>역사로 프로젝트를 만든 팀을 소개합니다😀</p>
       </div>
 
       <div className="team-grid">
@@ -61,7 +61,7 @@ function CreditsPage() {
 
       <div className="project-info" style={{ margin: "64px 0 32px" }}>
         <h2>🗂️ 프로젝트 info.</h2>
-        <div className="project-details" style={{ lineHeight: 2, fontSize: "1.08rem" }}>
+        <div className="project-details">
           <p>
             <strong>개발 기간:</strong> 2025.07.25 - 2025.08.12 (3주)
           </p>

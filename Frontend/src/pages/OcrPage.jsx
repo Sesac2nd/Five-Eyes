@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import apiClient from "@/utils/api";
 import "@/styles/pages/OcrPage.css";
+import Footer from "@/components/layout/Footer";
 
 function OcrPage() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -582,7 +583,9 @@ function OcrPage() {
           </div>
         </div>
       </div>
+      
     </div>
+
   );
 }
 

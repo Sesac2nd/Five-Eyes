@@ -27,7 +27,7 @@
 .sidebar-title {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 5px;
   font-size: 18px;
   font-weight: bold;
   color: var(--text-primary);
@@ -56,14 +56,15 @@
   font-size: 12px;
   color: var(--text-secondary);
   margin-top: 5px;
+  margin: 2px 0 0 6px; /* 왼쪽 아이콘 크기+gap만큼 들여쓰기, 위쪽 여백 2~4px 정도 */
   transition: color 0.3s ease;
+
 }
 
 .sidebar-section {
   padding: 20px;
   border-bottom: 1px solid var(--border-primary);
 }
-
 
 
 .section-title {
