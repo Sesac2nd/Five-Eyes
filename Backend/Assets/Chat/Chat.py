@@ -12,15 +12,15 @@ import traceback
 load_dotenv()
 DEBUG_FLAG = os.getenv("IS_DEBUG", "")
 
-chat_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+chat_key = os.getenv("AZURE_OAI_KEY", "")
 chat_model = os.getenv("AZURE_OAI_MODEL_NAME", "")
-chat_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+chat_endpoint = os.getenv("AZURE_OAI_ENDPOINT", "")
 chat_api_version = os.getenv("AZURE_OAI_API_VER", "")
 chat_deploy = os.getenv("AZURE_OAI_DEPLOY_NAME", "")
 
 keyword_model = os.getenv("AZURE_OAI_KEYWORD_MODEL_NAME", "")
 
-search_key = os.getenv("AZURE_SEARCH_API_KEY", "")
+search_key = os.getenv("AZURE_SEARCH_KEY", "")
 search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT", "")
 search_index = os.getenv("AZURE_SEARCH_INDEX_NAME", "")
 
