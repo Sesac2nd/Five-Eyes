@@ -226,6 +226,7 @@
 import { useState, useEffect } from "react";
 import { Upload, RotateCcw, Play, FileImage, AlertCircle, Focus } from "lucide-react";
 import "@/styles/pages/OcrPage.css";
+import Footer from "@/components/layout/Footer";
 
 function OcrPage() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -417,7 +418,9 @@ function OcrPage() {
           </div>
         </div>
       </div>
+      
     </div>
+
   );
 }
 

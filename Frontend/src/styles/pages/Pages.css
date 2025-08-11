@@ -230,6 +230,16 @@
   text-align: center;
 }
 
+.project-details {
+  line-height: 2;
+  font-size: 1.08rem;
+  color: var(--text-primary); /* 라이트 모드 기본색 */
+}
+
+.dark .project-details {
+  color: #333; /* 다크 모드일 때 흰색 */
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -282,19 +292,20 @@
 /* Page Header 공통 스타일 */
 .page-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 8px;
 }
 
 .page-header h1 {
-  font-size: 2.5rem;
-  color: #333;
-  margin-bottom: 10px;
-  font-weight: 300;
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .page-header p {
-  color: #666;
-  font-size: 1.1rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-bottom: 20px;
 }
 
 /* Mobile Responsive */
@@ -333,3 +344,4 @@
     padding: 20px;
   }
 }
+

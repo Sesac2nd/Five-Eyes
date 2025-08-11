@@ -2,35 +2,40 @@
 .ocr-page {
   max-width: 1200px;
   margin: 0 auto;
+  /* height: calc(100vh - 140px); */
+  /* display: flex; */
+  /* flex-direction: column; */
   padding: 20px;
+  /* min-height: 100vh;    전체 뷰포트 채움 */
 }
 
 .page-header {
-  text-align: center;
   margin-bottom: 40px;
+  text-align: center;
 }
 
 .page-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: var(--text-primary);
-  margin-bottom: 10px;
-  font-weight: 300;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .dark .page-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: #fff;
-  margin-bottom: 10px;
-  font-weight: 300;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .page-header p {
   color: var(--text-secondary);
-  font-size: 1.1rem;
+  font-size: 1rem;
+  margin-bottom: 20px;
 }
 .dark .page-header p {
   color: #dedede;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .ocr-container {
@@ -39,6 +44,8 @@
   gap: 30px;
   margin-bottom: 40px;
 }
+
+
 
 /* Controls Section */
 .ocr-controls {
