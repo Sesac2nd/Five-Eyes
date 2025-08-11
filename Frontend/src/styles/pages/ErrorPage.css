@@ -1,0 +1,318 @@
+/* ErrorPage.css - 에러 페이지 전용 스타일 */
+
+/* 에러 페이지 컨테이너 */
+.error-page {
+  min-height: calc(100vh - 140px); /* 헤더/푸터 고려 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  position: relative;
+}
+
+/* 다크모드 배경 */
+.dark .error-page {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+}
+
+/* 에러 콘텐츠 중앙 정렬 컨테이너 */
+.error-content {
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  background: white;
+  border-radius: 16px;
+  padding: 60px 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 다크모드 에러 콘텐츠 */
+.dark .error-content {
+  background: #2a2a2a;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* 에러 콘텐츠 배경 장식 */
+.error-content::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.05) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 에러 콘텐츠 내용들이 배경 위에 위치 */
+.error-content > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 에러 페이지 제목 */
+.error-content h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+/* 다크모드 제목 */
+.dark .error-content h1 {
+  color: #ffffff;
+}
+
+/* 에러 메시지 */
+.error-content > p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+/* 다크모드 메시지 */
+.dark .error-content > p {
+  color: #cccccc;
+}
+
+/* 에러 세부사항 컨테이너 */
+.error-details {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 30px 0;
+  text-align: left;
+}
+
+/* 다크모드 에러 세부사항 */
+.dark .error-details {
+  background: #1e1e1e;
+  border-color: #404040;
+}
+
+/* 에러 세부사항 제목 */
+.error-details strong {
+  color: #dc3545;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+/* 다크모드 에러 세부사항 제목 */
+.dark .error-details strong {
+  color: #ff6b6b;
+}
+
+/* 에러 메시지 텍스트 */
+.error-details pre {
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.9rem;
+  color: #495057;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* 다크모드 에러 메시지 텍스트 */
+.dark .error-details pre {
+  background: #0d1117;
+  border-color: #30363d;
+  color: #f0f6fc;
+}
+
+/* 액션 버튼 컨테이너 */
+.error-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 40px;
+}
+
+/* 기본 버튼 스타일 */
+.error-actions .btn {
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
+/* 주 액션 버튼 (홈으로 돌아가기) */
+.error-actions .btn-primary {
+  background: linear-gradient(135deg, #4285f4 0%, #3367d6 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.error-actions .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(66, 133, 244, 0.4);
+  background: linear-gradient(135deg, #3367d6 0%, #2c5aa0 100%);
+}
+
+/* 보조 액션 버튼 (새로고침) */
+.error-actions .btn-secondary {
+  background: white;
+  color: #6c757d;
+  border: 2px solid #e9ecef;
+}
+
+.error-actions .btn-secondary:hover {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  color: #495057;
+  transform: translateY(-2px);
+}
+
+/* 다크모드 보조 버튼 */
+.dark .error-actions .btn-secondary {
+  background: #2a2a2a;
+  color: #cccccc;
+  border-color: #404040;
+}
+
+.dark .error-actions .btn-secondary:hover {
+  background: #3a3a3a;
+  border-color: #505050;
+  color: #ffffff;
+}
+
+/* 에러 아이콘 추가 (선택사항) */
+.error-content::after {
+  content: "⚠️";
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 2rem;
+  opacity: 0.3;
+}
+
+/* 반응형 디자인 - 태블릿 */
+@media (max-width: 768px) {
+  .error-content {
+    padding: 40px 24px;
+    margin: 0 16px;
+  }
+
+  .error-content h1 {
+    font-size: 2rem;
+  }
+
+  .error-content > p {
+    font-size: 1.1rem;
+  }
+
+  .error-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .error-actions .btn {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+/* 반응형 디자인 - 모바일 */
+@media (max-width: 480px) {
+  .error-page {
+    padding: 16px;
+  }
+
+  .error-content {
+    padding: 32px 20px;
+  }
+
+  .error-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 16px;
+  }
+
+  .error-content > p {
+    font-size: 1rem;
+    margin-bottom: 24px;
+  }
+
+  .error-details {
+    padding: 20px;
+    margin: 24px 0;
+  }
+
+  .error-details pre {
+    font-size: 0.8rem;
+    padding: 12px;
+  }
+
+  .error-actions {
+    margin-top: 32px;
+  }
+
+  .error-actions .btn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 애니메이션 효과 */
+.error-content {
+  animation: errorFadeIn 0.6s ease-out;
+}
+
+@keyframes errorFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 접근성 개선 */
+.error-actions .btn:focus {
+  outline: 3px solid rgba(66, 133, 244, 0.5);
+  outline-offset: 2px;
+}
+
+/* 호버 시 부드러운 전환 */
+.error-actions .btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.error-actions .btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.error-actions .btn:hover::before {
+  left: 100%;
+}

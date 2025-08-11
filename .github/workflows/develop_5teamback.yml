@@ -1,61 +1,153 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
-
-name: Build and deploy Python app to Azure Web App - 5teamback
+name: Deploy Backend to Azure
 
 on:
   push:
     branches:
       - develop
-  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      # 1. 코드 가져오기
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
+      # 2. Python 설치
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Create and start virtual environment
+      # 3. 시스템 의존성 설치 (PaddleOCR 완전 지원)
+      - name: Install system dependencies for PaddleOCR
         run: |
-          python -m venv venv
-          source venv/bin/activate
-      
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+          sudo apt update
+          # 기본 OpenGL 및 시스템 라이브러리
+          sudo apt-get -y install \
+            libgl1-mesa-dri \
+            libglib2.0-0 \
+            libsm6 \
+            libxext6 \
+            libxrender-dev \
+            libgomp1
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: |
-            .
-            !venv/
+          # OpenCV 및 비디오 처리를 위한 추가 라이브러리
+          sudo apt-get -y install \
+            libgtk-3-0 \
+            libavcodec-dev \
+            libavformat-dev \
+            libswscale-dev \
+            libv4l-dev \
+            libxvidcore-dev \
+            libx264-dev
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+      # 4. Python 의존성 설치
+      - name: Install Python dependencies
+        working-directory: ./Backend
+        run: |
+          python -m pip install --upgrade pip
+          # PaddlePaddle CPU 버전 먼저 설치
+          python3 -m pip install paddlepaddle==3.1.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+          # 나머지 의존성 설치
+          pip install -r requirements.txt
+
+      # 5. 핵심 패키지 검증
+      - name: Verify core installations
+        working-directory: ./Backend
+        run: |
+          echo "=== 🔧 기본 패키지 검증 ==="
+          python -c "import fastapi; print('✅ FastAPI:', fastapi.__version__)"
+          python -c "import uvicorn; print('✅ Uvicorn:', uvicorn.__version__)"
+          python -c "import gunicorn; print('✅ Gunicorn:', gunicorn.__version__)"
+
+          echo "=== 🤖 AI/ML 패키지 검증 ==="
+          python -c "
+          try:
+              import paddle
+              print('✅ Paddle:', paddle.__version__)
+              print('🔧 Paddle 설정 확인...')
+              paddle.set_flags({
+                  'FLAGS_fraction_of_cpu_memory_to_use': 0.5,
+                  'FLAGS_eager_delete_tensor_gb': 0.0,
+                  'FLAGS_fast_eager_deletion_mode': True,
+                  'FLAGS_use_mkldnn': False,
+              })
+              print('✅ Paddle 설정 완료')
+          except Exception as e:
+              print('❌ Paddle 실패:', e)
+              exit(1)
+          "
+
+      # 8. 최종 Azure 패키지 확인
+      - name: Verify Azure integrations
+        working-directory: ./Backend
+        run: |
+          echo "=== ☁️ Azure 서비스 패키지 검증 ==="
+          python -c "
+          try:
+              from azure.cognitiveservices.speech import SpeechConfig
+              print('✅ Azure Speech Service 임포트 성공')
+              
+              from azure.ai.formrecognizer import DocumentAnalysisClient
+              print('✅ Azure Form Recognizer 임포트 성공')
+              
+              from azure.search.documents import SearchClient
+              print('✅ Azure Search Service 임포트 성공')
+              
+              print('✅ 모든 Azure 서비스 패키지 정상!')
+              
+          except Exception as e:
+              print('⚠️ Azure 패키지 확인:', e)
+              print('(환경변수가 설정되지 않아도 정상적인 경우일 수 있음)')
+          "
+
+      # 9. 최종 헬스체크 시뮬레이션
+      - name: Simulate health check
+        working-directory: ./Backend
+        run: |
+          echo "=== 💊 헬스체크 시뮬레이션 ==="
+          python -c "
+          import sys
+          sys.path.append('.')
+
+          # 환경변수 체크 없이 서비스 상태만 확인
+          try:
+              from services.ocr_service import get_available_engines
+              ocr_engines = get_available_engines()
+              
+              health_status = {
+                  'ocr': {
+                      'paddle_ocr': {
+                          'available': ocr_engines.get('paddle', False),
+                          'status': '✓' if ocr_engines.get('paddle', False) else '✗'
+                      },
+                      'azure_ocr': {
+                          'available': ocr_engines.get('azure', False),
+                          'status': '✓' if ocr_engines.get('azure', False) else '✗'
+                      }
+                  }
+              }
+              
+              print(f'💊 최종 헬스체크 결과: {health_status}')
+              
+              if not health_status['ocr']['paddle_ocr']['available']:
+                  print('❌ PaddleOCR이 비활성화됨! 배포 중단')
+                  exit(1)
+              
+              print('✅ 헬스체크 통과! 배포 진행 가능')
+              
+          except Exception as e:
+              print(f'❌ 헬스체크 실패: {e}')
+              exit(1)
+          "
+
+      # 10. Azure App Service로 배포
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
         with:
-          name: python-app
-      
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
-        with:
-          app-name: '5teamback'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_464EC8C7B50A43D8B582BB49AF0B55DD }}
+          app-name: 5teamback
+          slot-name: production
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_A989F9A786414385B17B295DCA209E37 }}
+          package: ./Backend

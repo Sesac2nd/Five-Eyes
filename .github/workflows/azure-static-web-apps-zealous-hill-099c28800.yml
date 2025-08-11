@@ -1,3 +1,4 @@
+# .github/workflows/azure-static-web-apps-zealous-hill-099c28800.yml 수정
 name: Azure Static Web Apps CI/CD
 
 on:
@@ -22,8 +23,10 @@ jobs:
         with:
           submodules: true
           lfs: false
+      
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
+      
       - name: Get Id Token
         uses: actions/github-script@v6
         id: idtoken
@@ -32,19 +35,38 @@ jobs:
                const coredemo = require('@actions/core')
                return await coredemo.getIDToken()
            result-encoding: string
+      
+      # 🔥 Node.js 설정 및 의존성 설치
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './Frontend/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: ./Frontend
+        run: |
+          npm ci
+          npm list @vitejs/plugin-react || npm install @vitejs/plugin-react
+      
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ZEALOUS_HILL_099C28800 }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "./Frontend" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "./dist" # Built app content directory - optional
+          app_location: "./Frontend"
+          api_location: ""
+          output_location: "./dist"
           github_id_token: ${{ steps.idtoken.outputs.result }}
-          ###### End of Repository/Build Configurations ######
+          skip_app_build: false
+          # 🔥 빌드 명령어 명시적 지정
+          app_build_command: "npm run build"
+        env:
+          # 🔥 환경변수 설정
+          VITE_API_BASE_URL: "https://5teamback.azurewebsites.net"
+          NODE_ENV: "production"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

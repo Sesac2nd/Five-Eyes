@@ -1,6 +1,6 @@
 // src/router/router.jsx
 import RootLayout from "@/layouts/RootLayout";
-import { HelpPage, CreditsPage, Error } from "@/pages";
+import { HelpPage, CreditsPage, ErrorPage } from "@/pages";
 import { configRoutes, getNavigationItems } from "@/utils";
 import { createBrowserRouter } from "react-router-dom";
 
@@ -9,6 +9,7 @@ import HomePageWrapper from "@/routes/HomePageWrapper";
 import OcrPageWrapper from "@/routes/OcrPageWrapper";
 import ChatbotPageWrapper from "@/routes/ChatbotPageWrapper";
 import SearchResultsPageWrapper from "@/routes/SearchResultsPageWrapper";
+
 
 /** @type {import('react-router-dom').RouteObject[]} */
 const navigation = [
@@ -50,6 +51,13 @@ const navigation = [
     element: <CreditsPage />,
     icon: "👥",
     description: "프로젝트 팀 소개",
+  },
+    // 🔥 Catch-all 라우트 추가 (모든 미매칭 경로를 ErrorPage로)
+  {
+    text: "잘못된 경로입니다.",
+    path: "*",
+    element: <ErrorPage />,
+    hideInMenu: true,
   },
 ];
 

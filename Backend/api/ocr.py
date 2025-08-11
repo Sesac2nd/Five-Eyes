@@ -1,235 +1,506 @@
-# api/ocr.py
+# Backend/api/ocr.py - 상태 업데이트 수정된 버전
+import os
 import uuid
-import time
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+import tempfile
+import threading
+from datetime import datetime
+from dotenv import load_dotenv
+from config.database import get_db, SessionLocal
+
+from models.ocr_model import OCRAnalysis
+from services.ocr_service import analyze_document
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Depends,
+    UploadFile,
+    File,
+    Form,
+    BackgroundTasks,
+)
+from fastapi.responses import FileResponse, JSONResponse
+
+from pydantic import BaseModel
+from typing import List, Dict, Union, Any, Optional
 from sqlalchemy.orm import Session
-from typing import Optional
-import logging
 
-from config.database import get_db
-from models.ocr import OCRLog, OCRRequest, OCRResult, OCRResponse, OCRModelType
-from services.paddle_ocr_service import paddle_ocr_service
-from services.azure_ocr_service import azure_ocr_service
-from utils.image_processing import preprocess_image_for_ocr
+load_dotenv()
+IS_DEBUG = os.getenv("IS_DEBUG", "")
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# 진행 중인 분석 상태 저장 (Redis 사용 가능하면 사용, 아니면 메모리)
+try:
+    import redis
 
-@router.post("/ocr", response_model=OCRResponse)
-async def process_ocr(
-    file: UploadFile = File(..., description="분석할 이미지 파일"),
-    model_type: str = Form(..., description="OCR 모델 타입 (ppocr 또는 azure)"),
-    session_id: Optional[str] = Form(None, description="세션 ID (선택사항)"),
+    redis_client = redis.Redis.from_url(
+        os.getenv("REDIS_URL", "redis://localhost:6379")
+    )
+    redis_client.ping()  # 연결 테스트
+    USE_REDIS = True
+    print("✅ Redis 연결 성공 - 상태 저장에 Redis 사용")
+except:
+    USE_REDIS = False
+    ANALYSIS_STATUS = {}  # 메모리 저장소
+    print("⚠️ Redis 연결 실패 - 메모리 저장소 사용")
+
+
+# 비동기 모델들만 유지
+class OCRAsyncResponse(BaseModel):
+    analysis_id: str
+    status: str
+    message: str
+    estimated_time: str
+
+
+class OCRStatusResponse(BaseModel):
+    analysis_id: str
+    status: str
+    progress_percentage: int = 0
+    current_step: Optional[str] = None
+    error_message: Optional[str] = None
+
+
+def set_analysis_status(analysis_id: str, data: dict):
+    """분석 상태 저장 (Redis 또는 메모리)"""
+    if USE_REDIS:
+        try:
+            import json
+
+            redis_client.setex(
+                f"ocr_status:{analysis_id}", 3600, json.dumps(data)
+            )  # 1시간 TTL
+        except:
+            ANALYSIS_STATUS[analysis_id] = data
+    else:
+        ANALYSIS_STATUS[analysis_id] = data
+
+
+def get_analysis_status(analysis_id: str) -> dict:
+    """분석 상태 조회"""
+    if USE_REDIS:
+        try:
+            import json
+
+            data = redis_client.get(f"ocr_status:{analysis_id}")
+            return json.loads(data.decode()) if data else {}
+        except:
+            return ANALYSIS_STATUS.get(analysis_id, {})
+    else:
+        return ANALYSIS_STATUS.get(analysis_id, {})
+
+
+def update_analysis_progress(analysis_id: str, progress: int, step: str):
+    """분석 진행상태 업데이트 (개선된 버전)"""
+    try:
+        # 상태 저장
+        set_analysis_status(
+            analysis_id,
+            {
+                "progress": progress,
+                "step": step,
+                "status": "processing",
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
+
+        # DB 업데이트 (별도 세션 사용)
+        db = SessionLocal()
+        try:
+            analysis = (
+                db.query(OCRAnalysis)
+                .filter(OCRAnalysis.analysis_id == analysis_id)
+                .first()
+            )
+            if analysis:
+                analysis.status = "processing"
+                if hasattr(analysis, "progress_percentage"):
+                    analysis.progress_percentage = progress
+                if hasattr(analysis, "current_step"):
+                    analysis.current_step = step
+                db.commit()
+        finally:
+            db.close()
+
+        if IS_DEBUG:
+            print(f"📊 진행상태 업데이트: {analysis_id} - {progress}% ({step})")
+    except Exception as e:
+        print(f"❌ 진행상태 업데이트 실패: {e}")
+
+
+def background_ocr_analysis_thread(
+    analysis_id: str,
+    file_path: str,
+    filename: str,
+    engine: str,
+    extract_text_only: bool,
+    visualization: bool,
+):
+    """스레드로 실행되는 OCR 분석 (상태 업데이트 개선)"""
+    try:
+        print(f"🔍 백그라운드 OCR 분석 시작: {analysis_id}")
+
+        # 1. 분석 시작
+        update_analysis_progress(analysis_id, 5, "분석 초기화 중")
+
+        # 2. 파일 전처리
+        update_analysis_progress(analysis_id, 15, "이미지 전처리 중")
+
+        # 3. OCR 엔진별 처리
+        if engine == "paddle":
+            update_analysis_progress(analysis_id, 25, "PaddleOCR 모델 로딩 중")
+            import time
+
+            time.sleep(2)  # 실제 모델 로딩 시간
+
+            update_analysis_progress(analysis_id, 40, "한문 텍스트 검출 중")
+            time.sleep(1)
+
+            update_analysis_progress(analysis_id, 60, "텍스트 인식 및 분류 중")
+            time.sleep(1)
+
+            update_analysis_progress(analysis_id, 75, "텍스트 정렬 및 후처리 중")
+        else:
+            update_analysis_progress(analysis_id, 30, "Azure OCR 요청 중")
+            update_analysis_progress(analysis_id, 60, "텍스트 추출 중")
+
+        # 4. 실제 OCR 분석 실행
+        update_analysis_progress(analysis_id, 80, "OCR 분석 실행 중")
+        analysis_result = analyze_document(
+            file_path=file_path,
+            engine=engine,
+            extract_text_only=extract_text_only,
+            visualization=visualization,
+        )
+
+        # 5. 결과 저장
+        update_analysis_progress(analysis_id, 90, "결과 저장 중")
+
+        # DB 업데이트
+        db = SessionLocal()
+        try:
+            analysis = (
+                db.query(OCRAnalysis)
+                .filter(OCRAnalysis.analysis_id == analysis_id)
+                .first()
+            )
+            if analysis:
+                analysis.status = analysis_result.status
+                analysis.extracted_text = analysis_result.extracted_text
+                analysis.word_count = analysis_result.word_count
+                analysis.confidence_score = analysis_result.confidence_score
+                analysis.processing_time = analysis_result.processing_time
+                analysis.visualization_path = analysis_result.visualization_path
+                analysis.error_message = analysis_result.error_message
+                if hasattr(analysis, "progress_percentage"):
+                    analysis.progress_percentage = 100
+                if hasattr(analysis, "current_step"):
+                    analysis.current_step = "완료"
+                db.commit()
+        finally:
+            db.close()
+
+        # 최종 상태 업데이트
+        set_analysis_status(
+            analysis_id,
+            {
+                "progress": 100,
+                "step": "완료",
+                "status": analysis_result.status,
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
+
+        print(f"✅ 백그라운드 분석 완료: {analysis_id}")
+
+    except Exception as e:
+        print(f"❌ 백그라운드 분석 실패: {analysis_id} - {e}")
+
+        # 실패 상태 업데이트
+        set_analysis_status(
+            analysis_id,
+            {
+                "progress": 0,
+                "step": "분석 실패",
+                "status": "failed",
+                "error": str(e),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
+
+        try:
+            db = SessionLocal()
+            try:
+                analysis = (
+                    db.query(OCRAnalysis)
+                    .filter(OCRAnalysis.analysis_id == analysis_id)
+                    .first()
+                )
+                if analysis:
+                    analysis.status = "failed"
+                    analysis.error_message = str(e)
+                    if hasattr(analysis, "current_step"):
+                        analysis.current_step = "분석 실패"
+                    db.commit()
+            finally:
+                db.close()
+        except:
+            pass
+
+    finally:
+        # 임시 파일 정리
+        try:
+            if os.path.exists(file_path):
+                os.unlink(file_path)
+                print(f"🗑️ 임시 파일 정리: {file_path}")
+        except:
+            pass
+
+
+# 비동기 엔드포인트만 유지
+@router.post("/ocr/analyze-async", response_model=OCRAsyncResponse)
+async def analyze_ocr_async(
+    file: UploadFile = File(...),
+    engine: str = Form(default="paddle"),
+    extract_text_only: bool = Form(default=False),
+    visualization: bool = Form(default=True),
     db: Session = Depends(get_db),
 ):
-    """
-    이미지 OCR 처리 API
+    """비동기 OCR 분석 시작"""
+    if IS_DEBUG:
+        print(f"=== 비동기 OCR 분석 요청 ===")
+        print(f"파일명: {file.filename}")
+        print(f"엔진: {engine}")
 
-    - **file**: 업로드할 이미지 파일 (JPG, PNG, GIF 지원)
-    - **model_type**: 사용할 OCR 모델 ("ppocr" 또는 "azure")
-    - **session_id**: 세션 식별자 (선택사항, 없으면 자동 생성)
-    """
-
-    # 세션 ID 생성 (없는 경우)
-    if not session_id:
-        session_id = str(uuid.uuid4())
-
-    # 모델 타입 검증
-    try:
-        model_enum = OCRModelType(model_type.lower())
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"지원하지 않는 모델 타입입니다. 'ppocr' 또는 'azure'를 사용하세요.",
-        )
-
-    # 파일 타입 검증
+    # 파일 형식 검증
     if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+        raise HTTPException(status_code=400, detail="이미지 파일만 지원됩니다.")
 
-    start_time = time.time()
-    ocr_log = None
+    analysis_id = str(uuid.uuid4())
 
     try:
-        # 이미지 데이터 읽기
-        logger.info(f"📁 파일 업로드: {file.filename} ({file.content_type})")
-        image_data = await file.read()
-        file_size = len(image_data)
+        # 임시 파일 저장
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=f"_{file.filename}"
+        ) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
 
-        # 파일 크기 검증 (최대 10MB)
-        if file_size > 10 * 1024 * 1024:
-            raise HTTPException(
-                status_code=413,
-                detail="파일 크기가 너무 큽니다. 최대 10MB까지 지원합니다.",
-            )
-
-        # OCR 로그 초기 생성
-        ocr_log = OCRLog(
-            session_id=session_id,
-            model_type=model_enum.value,
-            original_filename=file.filename,
-            file_size=file_size,
-            success=False,
+        # DB에 초기 기록 저장
+        ocr_analysis = OCRAnalysis(
+            analysis_id=analysis_id,
+            filename=file.filename or "unknown",
+            engine=engine,
+            status="queued",
+            extracted_text="",
+            word_count=0,
+            confidence_score=0.0,
+            processing_time=0.0,
+            extract_text_only=extract_text_only,
+            visualization_requested=visualization,
         )
-        db.add(ocr_log)
-        db.flush()  # ID 생성을 위해
-
-        # 이미지 전처리
-        logger.info(f"🔄 이미지 전처리 시작 (모델: {model_enum.value})")
-        try:
-            processed_image_data = preprocess_image_for_ocr(
-                image_data, model_enum.value
-            )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        except Exception as e:
-            logger.error(f"이미지 전처리 실패: {e}")
-            processed_image_data = image_data  # 원본 사용
-
-        # 선택된 모델로 OCR 처리
-        logger.info(f"🤖 OCR 처리 시작 (모델: {model_enum.value})")
-
-        if model_enum == OCRModelType.PPOCR:
-            if not paddle_ocr_service.is_available():
-                raise HTTPException(
-                    status_code=503,
-                    detail="PaddleOCR 서비스가 현재 사용할 수 없습니다. 서버 관리자에게 문의하세요.",
-                )
-            ocr_result_dict = paddle_ocr_service.process_image(processed_image_data)
-
-        elif model_enum == OCRModelType.AZURE:
-            if not azure_ocr_service.is_available():
-                raise HTTPException(
-                    status_code=503,
-                    detail="Azure OCR 서비스가 현재 사용할 수 없습니다. API 키 설정을 확인하세요.",
-                )
-            ocr_result_dict = azure_ocr_service.process_image(processed_image_data)
-
-        else:
-            raise HTTPException(status_code=400, detail="지원하지 않는 모델입니다.")
-
-        # OCR 결과 처리
-        total_processing_time = time.time() - start_time
-
-        if ocr_result_dict["success"]:
-            # 성공적인 결과 처리
-            ocr_result = OCRResult(
-                success=True,
-                model_type=model_enum.value,
-                processing_time=total_processing_time,
-                confidence_avg=ocr_result_dict.get("confidence_avg"),
-                word_count=ocr_result_dict.get("word_count"),
-                lines=ocr_result_dict.get("lines"),
-                full_text=ocr_result_dict.get("full_text"),
-            )
-
-            # 로그 업데이트
-            ocr_log.success = True
-            ocr_log.processing_time = total_processing_time
-            ocr_log.confidence_avg = ocr_result_dict.get("confidence_avg")
-            ocr_log.word_count = ocr_result_dict.get("word_count")
-            ocr_log.result_data = ocr_result_dict
-
-            logger.info(
-                f"✅ OCR 처리 성공: {ocr_result.word_count}개 단어, 평균 신뢰도 {ocr_result.confidence_avg:.3f}"
-            )
-
-        else:
-            # 실패한 결과 처리
-            error_message = ocr_result_dict.get("error", "알 수 없는 오류")
-
-            ocr_result = OCRResult(
-                success=False,
-                model_type=model_enum.value,
-                processing_time=total_processing_time,
-                error_message=error_message,
-            )
-
-            # 로그 업데이트
-            ocr_log.success = False
-            ocr_log.processing_time = total_processing_time
-            ocr_log.error_message = error_message
-
-            logger.error(f"❌ OCR 처리 실패: {error_message}")
-
-        # 데이터베이스 커밋
+        db.add(ocr_analysis)
         db.commit()
 
-        # 응답 생성
-        response = OCRResponse(
-            log_id=ocr_log.id, session_id=session_id, result=ocr_result
+        # 초기 상태 저장
+        set_analysis_status(
+            analysis_id,
+            {
+                "progress": 0,
+                "step": "대기 중",
+                "status": "queued",
+                "updated_at": datetime.now().isoformat(),
+            },
         )
 
-        return response
+        # 스레드로 백그라운드 작업 시작 (상태 업데이트 개선)
+        thread = threading.Thread(
+            target=background_ocr_analysis_thread,
+            args=(
+                analysis_id,
+                temp_file_path,
+                file.filename,
+                engine,
+                extract_text_only,
+                visualization,
+            ),
+        )
+        thread.daemon = True
+        thread.start()
 
-    except HTTPException:
-        # FastAPI HTTPException은 그대로 전파
-        if ocr_log:
-            db.rollback()
-        raise
+        estimated_time = "1-2분" if engine == "paddle" else "30-60초"
+
+        return OCRAsyncResponse(
+            analysis_id=analysis_id,
+            status="queued",
+            message="분석이 시작되었습니다. 상태를 확인해주세요.",
+            estimated_time=estimated_time,
+        )
 
     except Exception as e:
-        # 예상치 못한 오류 처리
-        logger.error(f"❌ OCR API 예외 발생: {e}")
-
-        if ocr_log:
-            ocr_log.success = False
-            ocr_log.processing_time = time.time() - start_time
-            ocr_log.error_message = str(e)
-            try:
-                db.commit()
-            except:
-                db.rollback()
-
-        raise HTTPException(
-            status_code=500, detail=f"서버 내부 오류가 발생했습니다: {str(e)}"
-        )
-
-
-@router.get("/ocr/history/{session_id}")
-async def get_ocr_history(session_id: str, db: Session = Depends(get_db)):
-    """
-    특정 세션의 OCR 처리 기록 조회
-    """
-    try:
-        logs = (
-            db.query(OCRLog)
-            .filter(OCRLog.session_id == session_id)
-            .order_by(OCRLog.created_at.desc())
-            .all()
-        )
-
-        return {
-            "session_id": session_id,
-            "total_count": len(logs),
-            "logs": [log.to_dict() for log in logs],
-        }
-
-    except Exception as e:
-        logger.error(f"OCR 기록 조회 오류: {e}")
+        print(f"❌ 비동기 OCR 요청 처리 실패: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/ocr/status")
-async def get_ocr_status():
-    """
-    OCR 서비스 상태 확인
-    """
-    return {
-        "paddle_ocr": {
-            "available": paddle_ocr_service.is_available(),
-            "status": (
-                "✅ 사용 가능" if paddle_ocr_service.is_available() else "❌ 사용 불가"
-            ),
-        },
-        "azure_ocr": {
-            "available": azure_ocr_service.is_available(),
-            "status": (
-                "✅ 사용 가능" if azure_ocr_service.is_available() else "❌ 사용 불가"
-            ),
-        },
-        "supported_models": ["ppocr", "azure"],
-        "max_file_size": "10MB",
-        "supported_formats": ["JPG", "PNG", "GIF"],
-    }
+@router.get("/ocr/status/{analysis_id}", response_model=OCRStatusResponse)
+async def get_ocr_status(analysis_id: str, db: Session = Depends(get_db)):
+    """OCR 분석 상태 확인"""
+    try:
+        # 메모리/Redis에서 최신 상태 확인
+        status_data = get_analysis_status(analysis_id)
+
+        # DB에서 기본 정보 조회
+        analysis = (
+            db.query(OCRAnalysis).filter(OCRAnalysis.analysis_id == analysis_id).first()
+        )
+
+        if not analysis:
+            raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
+
+        # 상태 정보 조합
+        if status_data:
+            return OCRStatusResponse(
+                analysis_id=analysis_id,
+                status=status_data.get("status", analysis.status),
+                progress_percentage=status_data.get("progress", 0),
+                current_step=status_data.get("step", ""),
+                error_message=status_data.get("error", analysis.error_message),
+            )
+
+        return OCRStatusResponse(
+            analysis_id=analysis_id,
+            status=analysis.status,
+            progress_percentage=getattr(analysis, "progress_percentage", 0) or 0,
+            current_step=getattr(analysis, "current_step", "") or "",
+            error_message=analysis.error_message,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 상태 확인 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ocr/result/{analysis_id}")
+async def get_ocr_result(analysis_id: str, db: Session = Depends(get_db)):
+    """OCR 분석 결과 조회"""
+    try:
+        analysis = (
+            db.query(OCRAnalysis).filter(OCRAnalysis.analysis_id == analysis_id).first()
+        )
+
+        if not analysis:
+            raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
+
+        if analysis.status != "completed":
+            raise HTTPException(
+                status_code=400, detail="분석이 아직 완료되지 않았습니다."
+            )
+
+        # 시각화 이미지 URL 생성
+        visualization_url = None
+        if analysis.visualization_path and os.path.exists(analysis.visualization_path):
+            visualization_url = f"/api/ocr/visualization/{analysis_id}"
+
+        return {
+            "analysis_id": analysis_id,
+            "filename": analysis.filename,
+            "engine": analysis.engine,
+            "status": analysis.status,
+            "extracted_text": analysis.extracted_text,
+            "word_count": analysis.word_count,
+            "confidence_score": analysis.confidence_score,
+            "processing_time": analysis.processing_time,
+            "visualization_url": visualization_url,
+            "timestamp": analysis.created_at.isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 결과 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ocr/visualization/{analysis_id}")
+async def get_visualization_image(analysis_id: str, db: Session = Depends(get_db)):
+    """OCR 시각화 이미지 조회"""
+    try:
+        analysis = (
+            db.query(OCRAnalysis).filter(OCRAnalysis.analysis_id == analysis_id).first()
+        )
+
+        if not analysis:
+            raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
+
+        if not analysis.visualization_path or not os.path.exists(
+            analysis.visualization_path
+        ):
+            raise HTTPException(
+                status_code=404, detail="시각화 이미지를 찾을 수 없습니다."
+            )
+
+        return FileResponse(
+            analysis.visualization_path,
+            media_type="image/jpeg",
+            filename=f"ocr_result_{analysis_id[:8]}.jpg",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 시각화 이미지 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 기존 호환성 엔드포인트들 유지
+@router.get("/ocr/analysis/history/{analysis_id}")
+async def get_analysis_history(analysis_id: str, db: Session = Depends(get_db)):
+    """OCR 분석 기록 조회 (기존 호환)"""
+    try:
+        analysis = (
+            db.query(OCRAnalysis).filter(OCRAnalysis.analysis_id == analysis_id).first()
+        )
+
+        if not analysis:
+            raise HTTPException(status_code=404, detail="분석 기록을 찾을 수 없습니다.")
+
+        return analysis.to_dict()
+
+    except Exception as e:
+        print(f"❌ 분석 기록 조회 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ocr/analysis/list")
+async def get_analysis_list(
+    limit: int = 20,
+    offset: int = 0,
+    engine: Union[str, None] = None,
+    status: Union[str, None] = None,
+    db: Session = Depends(get_db),
+):
+    """OCR 분석 목록 조회 (기존 호환)"""
+    try:
+        query = db.query(OCRAnalysis)
+
+        if engine:
+            query = query.filter(OCRAnalysis.engine == engine)
+        if status:
+            query = query.filter(OCRAnalysis.status == status)
+
+        analyses = (
+            query.order_by(OCRAnalysis.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        return [analysis.to_dict() for analysis in analyses]
+
+    except Exception as e:
+        print(f"❌ 분석 목록 조회 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

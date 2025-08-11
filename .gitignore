@@ -1,0 +1,6 @@
+.env
+.vscode/
+bin_images/
+output/
+database.db
+.venv/
